@@ -1,0 +1,144 @@
+---
+title: "Código de seminario TextM 2025"
+---
+
+Se requieren los paquetes openalexR y tidyverse. Instalar con cuadros de diálogo y no con código.
+
+```{r, message=FALSE, warning=FALSE}
+library(openalexR)
+library(tidyverse)
+library(DataExplorer)
+```
+
+Explicar brevemente que es un base de datos bibiográfica y qué es Openalex y su comparación con tras bases de datos.
+
+## Seleccionar lo que interesa
+
+Utilizaremos como término de búsqueda las versiones correspondientes a los idiomas español, inglés, italiano, francés, portugues y alemán.
+
+Explicar la busqueda:
+
+```{r}
+socio_ar <- oa_fetch(entity = "works",title.search = "sociologia OR sociology OR sociologie OR soziologie OR social",authorships.countries = "AR")
+```
+
+Visualizar las 39 variables que hay en el dataset:
+```{r}
+names(socio_ar)
+```
+
+seleccionar las que interesan
+```{r}
+socio_ar_selec <- socio_ar %>% select(id,title,ab,topics,publication_year)
+```
+
+### Análisis de valores perdidos
+
+```{r}
+socio_ar_selec %>%
+  summarise(across(everything(), ~ mean(is.na(.)), .names = "prop_na_{col}"))
+```
+
+```{r}
+plot_missing(socio_ar_selec)
+```
+
+### Ver que artículos son
+```{r}
+socio_ar_selec %>%
+  filter(if_any(everything(), is.na))
+```
+
+```{r}
+#**ANALISIS SIMPLES - TOKENIZAR
+install.packages("tidytext") 
+library(tidytext) #Instalar antes el paquete tidytext con desde cuadros de diálogo
+```
+
+
+
+
+#Tokenizar los títulos
+palab_tit <- socio_ar_selec[, c("id","title")] %>%
+  unnest_tokens(palabra,title)
+  
+#Tokenizar los resumenes
+palab_res <- socio_ar_selec[, c("id","ab")] %>%
+  unnest_tokens(palabra,ab)
+
+#Unir los objetos de datos título y resumen
+palab_tit_res <- rbind(palab_tit, palab_res)
+
+#**ANALISIS SIMPLES - ELIMINAR PALABRAS NO SIGNIFICATIVAS
+#Instalar el paquete stopwords
+install.packages("stopwords")
+library(stopwords)
+#Primero vamos a obtener las stopwords ya elaboradas para diferentes idiomas. 
+stopwords_es <- tibble(palabra = stopwords::stopwords("es"))
+stopwords_en <- tibble(palabra = stopwords::stopwords("en"))
+stopwords_it <- tibble(palabra = stopwords::stopwords("it"))
+stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"))
+stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"))
+stopwords_de <- tibble(palabra = stopwords::stopwords("de"))
+#Eliminar palabras no significativas de la variable título y de título y resumen integrado
+palab_tit_limp <- palab_tit %>%
+  anti_join(stopwords_es, by = "palabra") %>%
+  anti_join(stopwords_en, by = "palabra") %>%
+  anti_join(stopwords_fr, by = "palabra") %>%
+  anti_join(stopwords_it, by = "palabra") %>%
+  anti_join(stopwords_pt, by = "palabra") %>%
+  anti_join(stopwords_de, by = "palabra")
+  
+palab_tit_res_limp <- palab_tit_res %>%
+  anti_join(stopwords_es, by = "palabra") %>%
+  anti_join(stopwords_en, by = "palabra") %>%
+  anti_join(stopwords_fr, by = "palabra") %>%
+  anti_join(stopwords_it, by = "palabra") %>%
+  anti_join(stopwords_pt, by = "palabra") %>%
+  anti_join(stopwords_de, by = "palabra")  
+
+#**ANALISIS SIMPLES - FRECUENCIA DE TERMINOS SIMPLES
+
+tit_freq <- palab_tit_limp %>%
+  count(palabra, sort = TRUE)
+
+tit_res_freq <- palab_tit_res_limp %>%
+  count(palabra, sort = TRUE)
+
+#**ANALISIS SIMPLES - TOKENIZACION DE TERMINOS COMPUESTOS
+#Bigramas de los títulos ordenados por freq
+bigram_tit <- palab_tit_limp %>%
+  mutate(next_word = lead(palabra)) %>%
+  filter(!is.na(next_word)) %>%
+  mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
+  select(bigram) %>%
+  count(bigram, sort = TRUE)
+
+#Bigramas de los títulos + resumen ordenados por freq
+bigram_tit_res <- palab_tit_res_limp %>%
+  mutate(next_word = lead(palabra)) %>%
+  filter(!is.na(next_word)) %>%
+  mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
+  select(bigram) %>%
+  count(bigram, sort = TRUE)
+
+#**NUBES DE PALABRAS
+#Instalar el paquete Wordcloud2
+install.packages("wordcloud2")
+library(wordcloud2)
+
+#Filtrar palabras con frecuencia mayor a 1
+#Título
+bigram_tit_f <- bigram_tit %>%
+  filter(n > 1) 
+
+#Título + resumen
+bigram_tit_res_f <- bigram_tit_res %>%
+  filter(n > 1) 
+
+# Crear nube de palabras
+#Título
+wordcloud2(bigram_tit_f, size = 0.7)
+
+#Título + resumen
+wordcloud2(bigram_tit_f, size = 0.7)
