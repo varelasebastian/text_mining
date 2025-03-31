@@ -39,8 +39,8 @@ socio_ar_selec %>%
   summarise(across(everything(), ~ mean(is.na(.)), .names = "prop_na_{col}"))
 ```
 
-```{r}
-plot_missing(socio_ar_selec)
+```{r, fig.width=5}
+plot_missing(socio_ar_selec) #paquete DataExplorer
 ```
 
 ### Ver que artículos son
@@ -49,38 +49,46 @@ socio_ar_selec %>%
   filter(if_any(everything(), is.na))
 ```
 
+## Preprocessing
+
+Primer paso del preprocesamiento: tokenización de los **títulos**:
 ```{r}
-#**ANALISIS SIMPLES - TOKENIZAR
-install.packages("tidytext") 
 library(tidytext) #Instalar antes el paquete tidytext con desde cuadros de diálogo
-```
 
-
-
-
-#Tokenizar los títulos
 palab_tit <- socio_ar_selec[, c("id","title")] %>%
   unnest_tokens(palabra,title)
-  
-#Tokenizar los resumenes
+```
+
+Tokenización de los **resumenes**:
+```{r}
 palab_res <- socio_ar_selec[, c("id","ab")] %>%
   unnest_tokens(palabra,ab)
+```
 
-#Unir los objetos de datos título y resumen
-palab_tit_res <- rbind(palab_tit, palab_res)
+Unir los objetos de datos título y resumen
+```{r}
+palab_tit_res <- bind_rows(palab_tit, palab_res)
+```
 
-#**ANALISIS SIMPLES - ELIMINAR PALABRAS NO SIGNIFICATIVAS
-#Instalar el paquete stopwords
-install.packages("stopwords")
-library(stopwords)
-#Primero vamos a obtener las stopwords ya elaboradas para diferentes idiomas. 
+### Eliminación de palabras no significativas (stopwords)
+```{r}
+library(stopwords) #Instalar el paquete stopwords desde cuadros de diálogo
+```
+
+Antes vamos a obtener las stopwords ya elaboradas para diferentes idiomas:
+
+```{r}
 stopwords_es <- tibble(palabra = stopwords::stopwords("es"))
 stopwords_en <- tibble(palabra = stopwords::stopwords("en"))
 stopwords_it <- tibble(palabra = stopwords::stopwords("it"))
 stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"))
 stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"))
 stopwords_de <- tibble(palabra = stopwords::stopwords("de"))
-#Eliminar palabras no significativas de la variable título y de título y resumen integrado
+```
+
+Eliminar palabras no significativas (stopwods) de la variable título y de título y resumen integrado
+
+```{r}
 palab_tit_limp <- palab_tit %>%
   anti_join(stopwords_es, by = "palabra") %>%
   anti_join(stopwords_en, by = "palabra") %>%
@@ -88,7 +96,9 @@ palab_tit_limp <- palab_tit %>%
   anti_join(stopwords_it, by = "palabra") %>%
   anti_join(stopwords_pt, by = "palabra") %>%
   anti_join(stopwords_de, by = "palabra")
-  
+```
+
+```{r}
 palab_tit_res_limp <- palab_tit_res %>%
   anti_join(stopwords_es, by = "palabra") %>%
   anti_join(stopwords_en, by = "palabra") %>%
@@ -96,49 +106,80 @@ palab_tit_res_limp <- palab_tit_res %>%
   anti_join(stopwords_it, by = "palabra") %>%
   anti_join(stopwords_pt, by = "palabra") %>%
   anti_join(stopwords_de, by = "palabra")  
+```
 
-#**ANALISIS SIMPLES - FRECUENCIA DE TERMINOS SIMPLES
 
+## Análisis simples
+### Frencuencia de palabras
+
+```{r}
 tit_freq <- palab_tit_limp %>%
   count(palabra, sort = TRUE)
+tit_freq
+```
 
+```{r}
 tit_res_freq <- palab_tit_res_limp %>%
   count(palabra, sort = TRUE)
+tit_res_freq
+```
 
-#**ANALISIS SIMPLES - TOKENIZACION DE TERMINOS COMPUESTOS
+## Analisis simples
+
+### Tokenización de términos compuestos
+
+En este caso bigramas
+
 #Bigramas de los títulos ordenados por freq
+```{r}
 bigram_tit <- palab_tit_limp %>%
   mutate(next_word = lead(palabra)) %>%
   filter(!is.na(next_word)) %>%
   mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
   select(bigram) %>%
   count(bigram, sort = TRUE)
+bigram_tit
+```
 
-#Bigramas de los títulos + resumen ordenados por freq
+Bigramas de los títulos + resumen ordenados por freq
+```{r}
 bigram_tit_res <- palab_tit_res_limp %>%
   mutate(next_word = lead(palabra)) %>%
   filter(!is.na(next_word)) %>%
   mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
   select(bigram) %>%
   count(bigram, sort = TRUE)
+bigram_tit_res
+```
 
-#**NUBES DE PALABRAS
-#Instalar el paquete Wordcloud2
-install.packages("wordcloud2")
-library(wordcloud2)
+## Nubes de palabras
 
-#Filtrar palabras con frecuencia mayor a 1
-#Título
+Wordclouds
+
+```{r}
+library(wordcloud2) #Instalar antes el paquete Wordcloud2
+```
+
+Filtrar palabras con frecuencia mayor a 1 en el títulos:
+```{r}
 bigram_tit_f <- bigram_tit %>%
   filter(n > 1) 
+```
 
-#Título + resumen
+Ahora en Título + resumen
+```{r}
 bigram_tit_res_f <- bigram_tit_res %>%
   filter(n > 1) 
+```
 
-# Crear nube de palabras
-#Título
+Creación de la nube de palabras de los títulos:
+```{r}
 wordcloud2(bigram_tit_f, size = 0.7)
+```
 
-#Título + resumen
+Ahora de títulos + resumen
+
+```{r}
 wordcloud2(bigram_tit_f, size = 0.7)
+```
+
