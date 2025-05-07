@@ -43,7 +43,7 @@ socio_ar_selec %>%
 plot_missing(socio_ar_selec) #paquete DataExplorer
 ```
 
-### Ver que artículos son
+Ver que artículos son
 ```{r}
 socio_ar_selec %>%
   filter(if_any(everything(), is.na))
@@ -110,7 +110,9 @@ palab_tit_res_limp <- palab_tit_res %>%
 
 
 ## Análisis simples
-### Frencuencia de palabras
+
+
+### Frecuencia de palabras
 
 ```{r}
 tit_freq <- palab_tit_limp %>%
@@ -130,7 +132,7 @@ tit_res_freq
 
 En este caso bigramas
 
-#Bigramas de los títulos ordenados por freq
+# Bigramas de los títulos ordenados por freq
 ```{r}
 bigram_tit <- palab_tit_limp %>%
   mutate(next_word = lead(palabra)) %>%
@@ -183,9 +185,63 @@ Ahora de títulos + resumen
 wordcloud2(bigram_tit_f, size = 0.7)
 ```
 
-## Tests con LLMs
+## Grandes modelos de lenguaje 
 
-Experimento abajo como funciona el paquete Mall con este dataset de artículos socio_ar_selec.
+Large Language Models (LLMs) de inteligencia artificial.
+
+En este sección se usarán los paquetes ollamar, mall y ellmer.
+
+* **Ollamar** es un paquete de R que actúa como una API de la plataforma Ollama. 
+* **Mall** es un paquete de R se utiliza para datasets, y funciona con los modelos locales de Ollama.
+* **Ellmer**  es un paquete de R se utiliza para chatbots  funciona tanto con los modelos locales de Ollama como con otras APIs en la web como las de OpenIA, Mistral, DeepSeek, Anthropic, etc.
+
+## Ollamar
+
+1.  Instalar el paquete ollamar
+
+```{r, message=FALSE, warning=FALSE}
+library(ollamar) #instalar antes en el rígido
+```
+
+2.  Bajar e instalar en la pc el soft de Ollama:
+
+https://ollama.com/
+
+
+3.  Bajar a la pc local algunos modelos para usar luego:
+
+Navegar un poco la web de ollama buscando modelos. Estos se bajan al disco rígido sólo una vez.
+
+```{r}
+ollamar::pull("llama3.2") 
+```
+
+```{r}
+ollamar::pull("deepseek-r1:1.5b") # red neuronal con 1.5 mil millones de parámetros!
+```
+
+```{r}
+ollamar::pull("deepseek-llm:7b") # 7 mil millones de parámetros (más pesada para la pc local)
+```
+
+```{r}
+ollamar::pull("deepseek-r1:8b")
+```
+
+```{r}
+ollamar::pull("llama3:8b")
+```
+
+```{r}
+ollamar::pull("llama2:13b")
+```
+
+## Ejercicios de aplicación 
+
+## 1. Comunicación con chatbots
+
+
+
 
 ```{r}
 socio_ar_selec
@@ -193,36 +249,50 @@ socio_ar_selec
 
 Achico el dataset para las pruebas:
 ```{r}
+set.seed(1234)  # Semilla aleatoria
+
 # Extraer 30 filas aleatorias sin reemplazo (default)
 dataset_llm <- socio_ar_selec %>%
-  slice_sample(n = 10)
+  sample_n(10)
 ```
 
+Desenlistar la columna "topics", que es de tipo **list**: una lista en R es una estructura de datos versátil que puede contener elementos de diferentes tipos, como números, cadenas de texto, vectores e incluso otras listas. Una variable común en R almacena un único valor de un tipo de dato específico, mientras que una lista puede contener múltiples elementos de diferentes tipos (se puede entender como una mamushka)
+
+```{r}
+dataset_llm_unlisted <- dataset_llm %>%
+  unnest(topics, names_sep = "_") 
+```
+
+names_sep = "_" evita duplicaciones en nombres de columnas.
+
+Ahora en cambio lo pivoteo para evitar la duplicación:
+```{r}
+dataset_llm_unlisted <- dataset_llm %>%
+  unnest_wider(topics, names_sep = "_")
+```
 
 ### The Mall package
 
-1. Instalar el paquete ollamar
-
-```{r, message=FALSE, warning=FALSE}
-library(ollamar)
-```
-
-2. Download and install Ollama from the official website:
-
-https://ollama.com/download
-
-3. Download an LLM model. For example, I have been developing this package using Llama 3.2 to test. To get that model you can run:
-
 ```{r}
-ollamar::pull("llama3.2")
+library(mall) #se activa el paquete en la sesión
 ```
-Los modelos se descargan una sola vez, como si fueran paquetes.
 
-## Qué modelo usar:
+Al invocar las funciones de este paquete nos preguntará antes de correrla, que modelo de los bajados al rígido queremos usar. Por otro lado, también podemos elegir de antemano uno en particular así:
 
 ```{r, eval=FALSE}
-llm_use("ollama", "deepseek-r1", seed = 100, temperature = 0)
+llm_use("ollama", "llama3.2", seed = 100, temperature = 0)
+
+# Otros modelos bajados: 
+
+# llama3.2 
+# deepseek-r1:1.5b (red neuronal con 1.5 mil millones de parámetros)
+# deepseek-llm:7b (7 mil millones de parámetros -más pesada para la pc local 
+# deepseek-r1:8b 
+# llama3:8b 
+# llama2:13b
 ```
+
+el argumento seed permite resultados reproducibles, el argumento temperature controla el grado de creatividad del modelo de lenguaje. Se puede poner cualquier valor de 0 a 1, siendo 0 lo más lógico y determinista y 1 lo más creativo (a veces incoherente).
 
 ### Summarize
 
@@ -233,26 +303,27 @@ dataset_llm |>
   llm_summarize(ab, max_words = 10)
 ```
 
+La variable resumen no parece muy interesante para cruzar con otras existiendo la variable con el resumen completo. Igual no se pueden hacer cruces con tan pocos casos.
+
 ## Clasificación
 
 ```{r}
-llm_classify( 
-  .data, 
-  col, 
-  labels, 
-  pred_name = ".classify", 
-  additional_prompt = "" 
-)
+# Extraer 30 filas aleatorias sin reemplazo (default)
+dataset_llm_100 <- socio_ar_selec %>%
+  slice_sample(n = 100)
+nrow(dataset_llm_100)
+```
 
-
-dataset_llm |>
+```{r}
+clasificador_1 <- dataset_llm_100 |>
   llm_classify(ab, c("subdisciplina sociológica 1 sobre desigualdad y estratificación (clase, género, raza)", "subdisciplina sociológica 2 sobre cultura y movimientos sociales", "subdisciplina sociológica 3 sobre sociología política/instituciones", "subdisciplina sociológica 4 sobre tecnología y sociedad (ej.: impacto de redes sociales",
 pred_name = "prod_type",
 additional_prompt = "debes clasificar sí o sí el artículo en alguna de las categorías propuestas, si no puedes crea una categoría residual llamada OTRA" ))
 ```
+esto se contrapone en cierta forma al topic modeling y clustering, con la diferencia de que en este caso la clasificación sería supervisada, ya que las categorías están predefinidas. CLustering y Topic modeling no saben de antemano las categorías resultantes.
 
 ```{r}
-dataset_llm |>
+clasificador_2 <- dataset_llm |>
   llm_classify(ab, 
       c("Desigualdad", 
       "Cultura", 
@@ -261,6 +332,9 @@ dataset_llm |>
 pred_name = "prod_type",
 additional_prompt = "debes clasificar sí o sí cada artículo en alguna de las categorías propuestas, si no encuentras una adecuada crea una categoría llamada Otra " ))
 ```
+
+## Sentiment analysis
+
 
 
 
