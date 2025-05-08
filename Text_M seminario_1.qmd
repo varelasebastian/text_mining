@@ -192,8 +192,8 @@ Large Language Models (LLMs) de inteligencia artificial.
 En este sección se usarán los paquetes ollamar, mall y ellmer.
 
 * **Ollamar** es un paquete de R que actúa como una API de la plataforma Ollama. 
-* **Mall** es un paquete de R se utiliza para datasets, y funciona con los modelos locales de Ollama.
 * **Ellmer**  es un paquete de R se utiliza para chatbots  funciona tanto con los modelos locales de Ollama como con otras APIs en la web como las de OpenIA, Mistral, DeepSeek, Anthropic, etc.
+* **Mall** es un paquete de R se utiliza para datasets, y funciona con los modelos locales de Ollama.
 
 ## Ollamar
 
@@ -238,7 +238,116 @@ ollamar::pull("llama2:13b")
 
 ## Ejercicios de aplicación 
 
-## 1. Comunicación con chatbots
+## 1. Comunicación con chatbots de IA
+
+### Ellmer Package
+
+Este paquete solicitudes a cualquier proveedor de LLMs mediante la API de Ollama. También funciona con las APIs en la nube (ejemplo OpenAI, Mistral ect)
+
+Ellmer usa LLMs locales:
+
+* Ventajas: gratuidad, privacidad
+
+* Desventajas: los LLMs son un poco menos avanzados que los disponibles vía web apis.
+
+Empezaremos a usar los modelos locales provistos por Ollama. Esto tiene ventajas y desventajas como se explicó en la presentación de la clase.
+
+### Chat básico con Ellmer
+
+A diferencia de Rapp no voy a usar OpenIA sino Ollama. No necesito
+setear clave con environmental variables.
+
+Dee esta manera usamos con código modelos de lenguaje de la misma manera que lo hacemos con la interface de ChatGPT o cualquier otra:
+
+```{r}
+library(ellmer)  # Instalar previamente
+```
+
+```{r}
+# Crea la sesión de chat y especifica el modelo local a usar
+chat <- chat_ollama(    
+  model = "llama3.2"
+)
+```
+
+Ejecuto una consulta al modelo (prompt del usuario)
+```{r}
+chat$chat("Cuentame una broma sobre un científico de datos")
+```
+Ahora creamos de nuevo la sesión, pero vamos a especificar el **system prompt**, parámetro que define instrucciones para guiar el comportamiento del modelo durante la sesión de chat:
+
+```{r}
+chat <- chat_ollama(
+  model = "llama3.2",
+  system_prompt = '"Sos un bot de AI que siempre responde lo siguiente: "Aguante Independiente de Avellaneda, el orgullo nacional!"'
+)
+```
+
+Vuelvo a ejecutar la consulta:
+```{r}
+chat$chat("Cuentame una broma sobre un científico de datos")
+```
+Observese como la respuesta cambia según el system_prompt:
+
+```{r}
+formal <- chat_ollama(model = "deepseek-llm:7b",  #cambio el modelo
+                      system_prompt = "Actúa como un profesor universitario explicando conceptos de forma clara y formal.")
+
+casual <- chat_ollama(model = "deepseek-llm:7b", 
+                      system_prompt = "Habla como un amigo explicando de forma relajada y con ejemplos simples.")
+```
+
+```{r}
+formal$chat("Explica en 70 palabras que es el overfitting")
+```
+
+```{r}
+casual$chat("Explica en 100 palabras que es el overfitting")
+```
+También podemos pasar cualquier objeto externo, como una entrevista y pedirle al modelo que realice tareas de cualquier tipo, tal como hacemos con la interface habitual de ChatGPT. Aquí por ejemplo la vamos a pedir que resuma una entrevista. Se importa un entrevista como un objeto string (cadena de caracteres) y se asignan tareas al bot: generación de texto (analizar y resumir).
+
+```{r}
+#Bajar el archivo a la carpeta del proyecto desde este link: https://drive.google.com/file/d/135TC7Wy48UpYp-5V7wPmLF7btUdLSD3A/view?usp=sharing
+
+# Leer el archivo de texto directamente como una sola cadena
+entrevista <- paste(readLines("entrevista_militante.txt", 
+                            encoding = "UTF-8", warn = FALSE), 
+                   collapse = "\n") # une todas las línes leídas por readLines()
+```
+
+
+```{r}
+modelo <- chat_ollama(model = "llama3.2",
+                        system_prompt = "eres un bot muy conciso")
+
+# 2. Crear el prompt completo
+pregunta <- "Resume la entrevista en 100 palabras"
+prompt_completo <- paste(pregunta, entrevista)  # Combina instrucción + texto input
+
+# 3. Obtener y mostrar respuesta
+resultado <- modelo$chat(prompt_completo)
+resultado
+```
+La ventaja de usar chatbots mediante código es que permite integrarlos en procesos de datos.
+
+## 2. Extracción de información de formatos no estructurados (IA extractiva)
+
+Ellmer package. Se importa ahora un paper acádemico en formato como un objeto string (cadena de caracteres) y se asignan tareas:comprensión y extracción de información. Esto ya es más exigente, no para el modelo local sino para nuestras viejas PCs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
