@@ -10,17 +10,35 @@ library(tidyverse)
 library(DataExplorer)
 ```
 
-Explicar brevemente que es un base de datos bibiográfica y qué es Openalex y su comparación con tras bases de datos.
+# Selección de los datos a trabajar
 
-## Seleccionar lo que interesa
+## Seleccionar la fuente
 
-Utilizaremos como término de búsqueda las versiones correspondientes a los idiomas español, inglés, italiano, francés, portugues y alemán.
+En esta primera parte del seminario realizaremos las prácticas sobre un conjunto de datos textuales que emanan de **registros bibliográficos referenciales de producción sobre sociología argentina**. El concepto de "referencial" aquí es importante para entender que no estamos hablando de textos completos de artículos o libros, sino solo de sus datos bibliográficos: titulo, resumen, keywords, etc. 
 
-Explicar la busqueda:
+La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria. Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que si resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
+
+OpenAlex (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero con un crecimiento muy acelerado y que ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas, además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas.   
+
+La estructura de información que maneja esta base de datos tiene cierta complejidad y no es objetivo de este seminario abordarla. Simplemente, nos interesa reforzar la misma idea que ya se transmitió en los seminarios anteriores: que un buen conocimiento de la estructura de información subyacente de cualquier fuente, así como saber cuál es la forma correcta de interrogarla, son aspectos imprescindibles conocer y que anteceden a cualquier extracción de datos.
+
+## Buscar lo que interesa
+
+Al trabajar con una fuente multilingue, una primera decisión es determinar los idiomas que nos interesan que estén representados en nuestro conjunto de producción científica. En este caso, utilizaremos como término de búsqueda las versiones correspondientes a los idiomas español, inglés, italiano, francés, portugués y alemán. Al incluir esos idiomas, consideramos que estamos recogiendo la mayoría de la producción de nuestros autores argentinos.
+
+Otro aspecto importante es tener claro cuales son los campos de datos de la base de datos que se utilizan en la interrogación. Solo para dar ejemplos de variantes posibles, una cosa es buscar un *string* únicamente en los títulos, otro que aparezca en los resúmenes o en ambos. Recordemos que cada campo de una base de datos es una unidad lógica que puede ser explotada individualmente, o en conjunto con otras, si es que usamos operaciones lógicas Booleanas (AND, OR, NOT). Sin embargo, estas cuestiones no siempre son tan transparentes en los productos y es necesario, como ya se dijo, conocer perfectamente la fuente por las implicancias que tiene a los fines de la recuperación de información.
+
+En nuestro caso utilizaremos una forma de búsqueda muy sencilla, en la que indicamos que queremos obtener los registros bibliográficos de trabajos que contienen en el título "Sociología". Así, luego de poner esta expresión bajo la lupa de los idiomas, determinamos que la expresión "sociolo" OR "soziolo", aplica un truncamiento válido para garantizar que se cubran todas las variantes idiomáticas necesarias: sociología (ES), sociology (EN), sociologie (FR), sociologia (IT y PT) y soziologie (DE). Claramente está es una expresión de búsqueda muy rudimentaria, que está lejos de dar cuenta de la producción científica argentina sobre sociología, pero solo tomemosla como un ejemplo funcional a nuestra causa de colecta de datos a trabajar. 
+
+El otro elemento que se incluye en la búsqueda, es la restricción de que los trabajos a recuperar deben tener al menos un autor que acompaña su firma con un lugar de trabajo en Argentina.
 
 ```{r}
-socio_ar <- oa_fetch(entity = "works",title.search = "sociologia OR sociology OR sociologie OR soziologie OR social",authorships.countries = "AR")
+socio_ar <- oa_fetch(entity = "works",title.search = "sociolo OR soziolo",authorships.countries = "AR")
 ```
+
+La función **oa_fetch** es propia del paquete **openalexR** y opera como si fuese una API de consulta a la base de datos, siguiendo los parámetros que s ele indican como argumento. 
+
+El resultado que arroja es un objeto R de tipo ???, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado ??? trabajos, los cuales quedan descriptos mediante 39 variables: 
 
 Visualizar las 39 variables que hay en el dataset:
 ```{r}
