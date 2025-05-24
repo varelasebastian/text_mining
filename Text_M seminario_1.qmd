@@ -2,7 +2,7 @@
 title: "Código de seminario TextM 2025"
 ---
 
-Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, stopwords. Instalar con cuadros de diálogo y no con código.
+Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, stopwords, Wordcloud2. Instalar con cuadros de diálogo y no con código.
 
 ```{r, message=FALSE, warning=FALSE}
 library(openalexR)
@@ -10,6 +10,7 @@ library(tidyverse)
 library(DataExplorer)
 library(tidytext)
 library(stopwords)
+library(wordcloud2)
 ```
 
 # Selección de los datos a trabajar
@@ -148,13 +149,30 @@ tit_res_freq <- palab_tit_res_limp %>%
 tit_res_freq
 ```
 
-## Analisis simples
+También vamos a aplicar este tipo de análisis sobre la variable topics(Tópicos). Si bien provee menos cantidad de texto que las variables título y resúmen, como no la hemos tokenizado, mantiene aún el vínculo entre los términos compuestos. Esta variable es un dataframe tibble en sí misma, es decir que estamos frente a un anidamiento de dataframes. Cuando la exploramos, vemos que los términos aparecen calificados con un "tipo". Los tipos se adjudican por especificidad creciente: dominio, campo, subcampo y tópico. Aquí nos interesa analisar los más específicos, es decir, aquellos que están calificados con el 4to nivel (tópic). Para ello generamos el objeto tópicos. Vemos que necesitamos escribir un poco más de código por esa condición de no ser una columna normal de un dataframe, sino de ser una columna que contiene a su vez un dataframe adentro (dataframe anidado): 
 
-### Tokenización de términos compuestos
+topicos <- socio_ar_selec %>%
+  unnest_longer (topics) %>%                                                                          #despliega el dataframe dentro del dataframe general
+  mutate(topics_id = topics$id, topics_type = topics$type, topics_name = topics$display_name) %>%     #renombra las columnas
+  filter(topics_type == "topic") %>%                                                                  #filtra por el typo "topic"
+  select(topics_id,topics_name)                                                                       #selecciono lo que quiero
 
-En este caso bigramas
+Calculamos las frecuencias
 
-# Bigramas de los títulos ordenados por freq
+top_freq <- topicos %>%
+  count(palabra, sort = TRUE)
+top_freq
+
+
+
+# PROCESAMIENTO 2: Tokenización de términos compuestos
+
+Como hemos visto hasta aquí, trabajar con "bag of word" tiene el inconveniente de la desvinculación de las palabras que componen términos copuestos. Un tipo de procesamiento que se puede aplicar para tratar de encontrar una mejora en este sentido, es con la detección de bigramas, es decir con ventanas de dos palabras. También podrían ser tri-gramas, cuatri-gramas, y así. 
+
+## Trabajar con bigramas
+
+Obtención de los bigramas de los títulos ordenados por freq
+
 ```{r}
 bigram_tit <- palab_tit_limp %>%
   mutate(next_word = lead(palabra)) %>%
@@ -176,13 +194,9 @@ bigram_tit_res <- palab_tit_res_limp %>%
 bigram_tit_res
 ```
 
-## Nubes de palabras
+# PROCESAMIENTO 3: Nubes de palabras
 
-Wordclouds
-
-```{r}
-library(wordcloud2) #Instalar antes el paquete Wordcloud2
-```
+Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos. 6 nubes d epalabras para poder comparar variantes. Por un lado generaremos 3 nubes, la de los títulos, la de los títulos + resumen y la de tópicos, con aquellos términos que tienen frecuencia mayor a 1. Luego lo repetiremos para aquellos términos con frecuencia mayor a 10.
 
 Filtrar palabras con frecuencia mayor a 1 en el títulos:
 ```{r}
@@ -196,17 +210,63 @@ bigram_tit_res_f <- bigram_tit_res %>%
   filter(n > 1) 
 ```
 
+Ahora con los tópicos
+```{r}
+top_f <- top_freq %>%
+  filter(n > 1) 
+```
+
 Creación de la nube de palabras de los títulos:
 ```{r}
 wordcloud2(bigram_tit_f, size = 0.7)
 ```
 
 Ahora de títulos + resumen
-
 ```{r}
 wordcloud2(bigram_tit_f, size = 0.7)
 ```
 
+Ahora de los tópicos
+```{r}
+wordcloud2(bigram_tit_f, size = 0.7)
+```
+
+Ahora hagamosló para frecuencia mayor a 10
+
+Filtrar palabras con frecuencia mayor a 10 en el títulos:
+```{r}
+bigram_tit_f10 <- bigram_tit %>%
+  filter(n > 10) 
+```
+
+Ahora en Título + resumen
+```{r}
+bigram_tit_res_f10 <- bigram_tit_res %>%
+  filter(n > 10) 
+```
+
+Ahora de los tópicos
+```{r}
+top_f10 <- top_f %>%
+  filter(n > 10) 
+```
+
+Creación de la nube de palabras de los títulos:
+```{r}
+wordcloud2(bigram_tit_f10, size = 0.7)
+```
+
+Ahora de títulos + resumen
+```{r}
+wordcloud2(bigram_tit_f10, size = 0.7)
+```
+
+Ahora de los tópicos
+```{r}
+wordcloud2(top_f10, size = 0.7)
+```
+
+***************************************************************************************************************************************************************************
 ## Grandes modelos de lenguaje 
 
 Large Language Models (LLMs) de inteligencia artificial.
