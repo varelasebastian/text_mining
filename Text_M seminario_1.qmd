@@ -2,98 +2,105 @@
 title: "Código de seminario TextM 2025"
 ---
 
-Se requieren los paquetes openalexR y tidyverse. Instalar con cuadros de diálogo y no con código.
+Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, stopwords. Instalar con cuadros de diálogo y no con código.
 
 ```{r, message=FALSE, warning=FALSE}
 library(openalexR)
 library(tidyverse)
 library(DataExplorer)
+library(tidytext)
+library(stopwords)
 ```
 
 # Selección de los datos a trabajar
 
 ## Seleccionar la fuente
 
-En esta primera parte del seminario realizaremos las prácticas sobre un conjunto de datos textuales que emanan de **registros bibliográficos referenciales de producción sobre sociología argentina**. El concepto de "referencial" aquí es importante para entender que no estamos hablando de textos completos de artículos o libros, sino solo de sus datos bibliográficos: titulo, resumen, keywords, etc. 
+En esta primera parte del seminario realizaremos las prácticas sobre un conjunto de datos textuales que emanan de **registros bibliográficos referenciales sobre sociología argentina**. El concepto de "referencial" es importante para entender que no estamos hablando de textos completos de artículos o libros, sino solo de sus datos bibliográficos: titulo, resumen, keywords, etc. Obedece a que resulta, en terminos prácticos, trabajar con un corpus textual acotado en cuanto a la longitud del texto de cada item, de esa manera se pueden realizar los checkeos de las acciones con mayor facilidad.
 
-La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria. Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que si resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
+La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria.  Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que si resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
 
-OpenAlex (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero con un crecimiento muy acelerado y que ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas, además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas.   
+OpenAlex (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero con un crecimiento muy acelerado y que ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas. La base se puede consultar mediante una API REST pública, que es gratuita y no requiere autenticación. Sin embargo, tiene limitaciones de velocidad, con un límite de 100.000 llamadas por día y un máximo de 10 llamadas por segundo. Por fuera de eso, ofrece un servicio premium. En nuestro caso, interrogaremos la base de datos utilizando un paquete de R que fue especificamente diseñado para mediar en esta tarea, que se llama **openalexR**. Siemplemente nos exime del uso de la API de forma directa.  
 
-La estructura de información que maneja esta base de datos tiene cierta complejidad y no es objetivo de este seminario abordarla. Simplemente, nos interesa reforzar la misma idea que ya se transmitió en los seminarios anteriores: que un buen conocimiento de la estructura de información subyacente de cualquier fuente, así como saber cuál es la forma correcta de interrogarla, son aspectos imprescindibles conocer y que anteceden a cualquier extracción de datos.
+La estructura de información que maneja esta base de datos tiene cierta complejidad y no es objetivo de este seminario abordarla. Simplemente, nos interesa reforzar la misma idea que ya se transmitió en los seminarios anteriores: que un buen conocimiento de la estructura de información subyacente de cualquier fuente, así como saber cuál es la forma correcta de interrogarla, son aspectos imprescindibles a conocer y que esto antecede a cualquier extracción de datos a los fines de ejecutar análisis serios.
 
 ## Buscar lo que interesa
 
 Al trabajar con una fuente multilingue, una primera decisión es determinar los idiomas que nos interesan que estén representados en nuestro conjunto de producción científica. En este caso, utilizaremos como término de búsqueda las versiones correspondientes a los idiomas español, inglés, italiano, francés, portugués y alemán. Al incluir esos idiomas, consideramos que estamos recogiendo la mayoría de la producción de nuestros autores argentinos.
 
-Otro aspecto importante es tener claro cuales son los campos de datos de la base de datos que se utilizan en la interrogación. Solo para dar ejemplos de variantes posibles, una cosa es buscar un *string* únicamente en los títulos, otro que aparezca en los resúmenes o en ambos. Recordemos que cada campo de una base de datos es una unidad lógica que puede ser explotada individualmente, o en conjunto con otras, si es que usamos operaciones lógicas Booleanas (AND, OR, NOT). Sin embargo, estas cuestiones no siempre son tan transparentes en los productos y es necesario, como ya se dijo, conocer perfectamente la fuente por las implicancias que tiene a los fines de la recuperación de información.
+Otro aspecto importante es tener claro cuales son los campos de datos de la base de datos que se utilizan en la interrogación. Solo para dar ejemplos de variantes posibles, una cosa es buscar un *string* únicamente en los títulos, otro que aparezca en los resúmenes o en ambos. Recordemos que cada campo de una base de datos es una unidad lógica que puede ser explotada individualmente, o en conjunto con otras, si es que usamos operaciones lógicas Booleanas (AND, OR, NOT), por ejemplo. Sin embargo, estas cuestiones no siempre son tan transparentes en los productos y es necesario, como ya se dijo, conocer perfectamente la fuente por las implicancias que tiene a los fines de la recuperación de información.
 
-En nuestro caso utilizaremos una forma de búsqueda muy sencilla, en la que indicamos que queremos obtener los registros bibliográficos de trabajos que contienen en el título "Sociología". Así, luego de poner esta expresión bajo la lupa de los idiomas, determinamos que la expresión "sociolo" OR "soziolo", aplica un truncamiento válido para garantizar que se cubran todas las variantes idiomáticas necesarias: sociología (ES), sociology (EN), sociologie (FR), sociologia (IT y PT) y soziologie (DE). Claramente está es una expresión de búsqueda muy rudimentaria, que está lejos de dar cuenta de la producción científica argentina sobre sociología, pero solo tomemosla como un ejemplo funcional a nuestra causa de colecta de datos a trabajar. 
+En nuestro caso utilizaremos una forma de búsqueda muy sencilla, en la que indicamos que queremos obtener los registros bibliográficos de trabajos que contienen en el resumen "Sociología" o sus variantes en los idiomas antes indicados: sociología (ES), sociology (EN), sociologie (FR), sociologia (IT y PT) y soziologie (DE). Claramente está es una expresión de búsqueda muy rudimentaria, que está lejos de dar cuenta de la producción científica argentina sobre sociología, pero solo la tomamos como un ejemplo funcional a nuestra causa de colecta de datos a trabajar. 
 
 El otro elemento que se incluye en la búsqueda, es la restricción de que los trabajos a recuperar deben tener al menos un autor que acompaña su firma con un lugar de trabajo en Argentina.
 
 ```{r}
-socio_ar <- oa_fetch(entity = "works",title.search = "sociolo OR soziolo",authorships.countries = "AR")
+socio_ar <- oa_fetch(abstract.search = "sociología OR sociologia OR sociology OR sociologie OR soziologie", authorships.institutions.country_code = "AR")
 ```
 
-La función **oa_fetch** es propia del paquete **openalexR** y opera como si fuese una API de consulta a la base de datos, siguiendo los parámetros que s ele indican como argumento. 
+La función **oa_fetch** es propia del paquete **openalexR** y opera como si fuese una API de consulta a la base de datos, siguiendo los parámetros que se le indican como argumento. 
 
-El resultado que arroja es un objeto R de tipo ???, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado ??? trabajos, los cuales quedan descriptos mediante 39 variables: 
+El resultado que arroja es un objeto R de tipo dataframe tibble, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado 1895 trabajos (aprox. esto puede variar según el momento en el que s ehace la búsqueda y descarga, los cuales quedan descriptos mediante 44 variables: 
 
-Visualizar las 39 variables que hay en el dataset:
+Visualizar las 44 variables que hay en el dataset:
 ```{r}
 names(socio_ar)
 ```
 
+Para nuestro ejercicio, vamos a trabajar con todas las observaciones pero no con todas las variables. Nos quedaremos solo con alguna básicas: el identificador del trabajo, el título, el resumen, los topicos y el año de publicación
+
 seleccionar las que interesan
 ```{r}
-socio_ar_selec <- socio_ar %>% select(id,title,ab,topics,publication_year)
+socio_ar_selec <- socio_ar %>% 
+  select(id,title,abstract,topics,publication_year)
 ```
 
-### Análisis de valores perdidos
+## Análisis de valores perdidos
+
+Una primera exploración sobre los datos que siempre es aconsejable hacer es el análisis de valores perdidos: 
 
 ```{r}
 socio_ar_selec %>%
   summarise(across(everything(), ~ mean(is.na(.)), .names = "prop_na_{col}"))
 ```
 
+Para visualir la proporción de faltantes de manera gráfica, se necesita el paquete DataExplorer. En este caso ya está instalado y corriendo.
+
 ```{r, fig.width=5}
-plot_missing(socio_ar_selec) #paquete DataExplorer
+plot_missing(socio_ar_selec) 
 ```
 
-Ver que artículos son
+Para saber que trabajos son a los que le falta un dato, que de acuerdo a como lo muestra el gráfico anterior corresponde al título:
+
 ```{r}
 socio_ar_selec %>%
   filter(if_any(everything(), is.na))
 ```
 
-## Preprocessing
+# PRE-PROCESAMIENTO
 
-Primer paso del preprocesamiento: tokenización de los **títulos**:
+Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que nos conducirán a obtener uno primeros resultados. El primero que proponemos es la generación de la NUBE DE PALABRAS que representa al corpus. Para ello se realizan algunos preprocesamientos como la *tokenization*, *stopword* 
+
+## Tokenization 
+
+Esto implica separar el texto en palabras. De las 5 variables que tiene nuestro corpus, solo 2 contienen textos ricos: los títulos y los resúmenes. Los tópicos, por el contrario son en muchos casos términos compuestos que no sería adecuado separar. Por ahora los excluímos.
+
 ```{r}
-library(tidytext) #Instalar antes el paquete tidytext con desde cuadros de diálogo
-
 palab_tit <- socio_ar_selec[, c("id","title")] %>%
   unnest_tokens(palabra,title)
 ```
-
-Tokenización de los **resumenes**:
 ```{r}
 palab_res <- socio_ar_selec[, c("id","ab")] %>%
   unnest_tokens(palabra,ab)
 ```
+Generamos dos objetos de datos para hacer 2 nubes de palabras distintas. Una que corresponda solo a los títulos, y otra a los títulos y a los resúmenes. Por ello, previamente debemos tener otro objeto que las integre. Estos listados de palabras son dataframes tibble que contienen 2 variables: el id del documento y la palabra. Cómo veremos más adelante, si bien esto es lo que s edenomina una *bag of words*, es imprescindible mantener la información de a que item u observación pertenece cada una. 
 
-Unir los objetos de datos título y resumen
 ```{r}
 palab_tit_res <- bind_rows(palab_tit, palab_res)
 ```
+## Stopword
 
-### Eliminación de palabras no significativas (stopwords)
-```{r}
-library(stopwords) #Instalar el paquete stopwords desde cuadros de diálogo
-```
-
-Antes vamos a obtener las stopwords ya elaboradas para diferentes idiomas:
+Aplicar stopword es eliminar del listado general de palabras (o *bag of words*) aquellas que no tienen demasiada carga de sentido, tales como artículos, preposiciones, pronombres, etc. Para poder hacer esa tarea se debe saber cuales son esas palabras, y por ello, previamente, debemos contar con los listados en cada uno de los idiomas que están representados en el corpus:
 
 ```{r}
 stopwords_es <- tibble(palabra = stopwords::stopwords("es"))
@@ -103,8 +110,7 @@ stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"))
 stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"))
 stopwords_de <- tibble(palabra = stopwords::stopwords("de"))
 ```
-
-Eliminar palabras no significativas (stopwods) de la variable título y de título y resumen integrado
+Una vez que tenemos los listados, podemos proceder a la eliminación. Lo haremos sobre el objeto que contiene las palabras de los títulos, por un lado, y en el objeto que tiene las de los títulos y resumenes, integradas. Esto lo hacemos para generar 2 nubes de palabras distintas que podremos comparar.
 
 ```{r}
 palab_tit_limp <- palab_tit %>%
@@ -126,11 +132,9 @@ palab_tit_res_limp <- palab_tit_res %>%
   anti_join(stopwords_de, by = "palabra")  
 ```
 
+# PROCESAMIENTO 1: Análisis de frecuencia
 
-## Análisis simples
-
-
-### Frecuencia de palabras
+Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. El primer análisis posible es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable Tópicos. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. 
 
 ```{r}
 tit_freq <- palab_tit_limp %>%
