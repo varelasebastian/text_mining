@@ -196,7 +196,7 @@ bigram_tit_res
 
 # PROCESAMIENTO 3: Nubes de palabras
 
-Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos. 6 nubes d epalabras para poder comparar variantes. Por un lado generaremos 3 nubes, la de los títulos, la de los títulos + resumen y la de tópicos, con aquellos términos que tienen frecuencia mayor a 1. Luego lo repetiremos para aquellos términos con frecuencia mayor a 10.
+Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos 6 nubes de palabras para poder comparar variantes. Por un lado generaremos 3 nubes, la de los títulos, la de los títulos + resumen y la de tópicos, con aquellos términos que tienen frecuencia mayor a 1. Luego lo repetiremos para aquellos términos con frecuencia mayor a 10.
 
 Filtrar palabras con frecuencia mayor a 1 en el títulos:
 ```{r}
