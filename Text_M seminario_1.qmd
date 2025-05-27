@@ -80,7 +80,25 @@ socio_ar_selec %>%
 
 # PRE-PROCESAMIENTO
 
-Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que nos conducirán a obtener uno primeros resultados. El primero que proponemos es la generación de la NUBE DE PALABRAS que representa al corpus. Para ello se realizan algunos preprocesamientos como la *tokenization*, *stopword* 
+Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que nos conducirán a obtener uno primeros resultados. El primero que proponemos es la generación de la NUBE DE PALABRAS que representa al corpus. Para ello se realizan algunos preprocesamientos como la *cleaning*, *tokenization*, *stopword* 
+
+## Limpieza del texto
+
+Principalmente se realiza una limpieza de los residuos que puedan quedar de HTML
+
+socio_ar_selec$title <- socio_ar_selec$title %>%
+  replace_html() %>%
+  replace_contraction() %>%
+  replace_non_ascii () %>%
+  replace_url () %>%
+  replace_email ()
+  
+socio_ar_selec$abstract <- socio_ar_selec$abstract %>%
+  replace_html() %>%
+  replace_contraction() %>%
+  replace_non_ascii () %>%
+  replace_url () %>%
+  replace_email ()
 
 ## Tokenization 
 
@@ -111,7 +129,7 @@ stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"))
 stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"))
 stopwords_de <- tibble(palabra = stopwords::stopwords("de"))
 ```
-Una vez que tenemos los listados, podemos proceder a la eliminación. Lo haremos sobre el objeto que contiene las palabras de los títulos, por un lado, y en el objeto que tiene las de los títulos y resumenes, integradas. Esto lo hacemos para generar 2 nubes de palabras distintas que podremos comparar.
+Una vez que tenemos los listados, podemos proceder a la eliminación. Lo haremos sobre el objeto que contiene las palabras de los títulos, por un lado, y en el objeto que tiene las de los títulos y resumenes, integradas. Esto lo hacemos para generar análisis comparativos.
 
 ```{r}
 palab_tit_limp <- palab_tit %>%
@@ -135,7 +153,8 @@ palab_tit_res_limp <- palab_tit_res %>%
 
 # PROCESAMIENTO 1: Análisis de frecuencia
 
-Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. El primer análisis posible es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable Tópicos. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. 
+Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. El anmás simple es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable topics. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. 
+La cantidad de observaciones que obtenemos nos está indicando la cantidad de palabras diferentes que contiene la variable(s) analizadas en la totalidad del corpus.
 
 ```{r}
 tit_freq <- palab_tit_limp %>%
@@ -151,11 +170,16 @@ tit_res_freq
 
 También vamos a aplicar este tipo de análisis sobre la variable topics(Tópicos). Si bien provee menos cantidad de texto que las variables título y resúmen, como no la hemos tokenizado, mantiene aún el vínculo entre los términos compuestos. Esta variable es un dataframe tibble en sí misma, es decir que estamos frente a un anidamiento de dataframes. Cuando la exploramos, vemos que los términos aparecen calificados con un "tipo". Los tipos se adjudican por especificidad creciente: dominio, campo, subcampo y tópico. Aquí nos interesa analisar los más específicos, es decir, aquellos que están calificados con el 4to nivel (tópic). Para ello generamos el objeto tópicos. Vemos que necesitamos escribir un poco más de código por esa condición de no ser una columna normal de un dataframe, sino de ser una columna que contiene a su vez un dataframe adentro (dataframe anidado): 
 
+**unnest** permite desplegar el dataframe dentro del dataframe general
+**mutate** sirve para renombrar las columnas
+**filter** sirve para filtrar por la categoría de tópico. En este caso usaremos "topic"
+**select** para seleccionar las columnas que me interesan 
+
 topicos <- socio_ar_selec %>%
-  unnest_longer (topics) %>%                                                                          #despliega el dataframe dentro del dataframe general
-  mutate(topics_id = topics$id, topics_type = topics$type, topics_name = topics$display_name) %>%     #renombra las columnas
-  filter(topics_type == "topic") %>%                                                                  #filtra por el typo "topic"
-  select(topics_id,topics_name)                                                                       #selecciono lo que quiero
+  unnest_longer (topics) %>%                                                                          
+  mutate(topics_id = topics$id, topics_type = topics$type, topics_name = topics$display_name) %>%     
+  filter(topics_type == "topic") %>%                                                                  
+  select(topics_id,topics_name)                                                                       
 
 Calculamos las frecuencias
 
@@ -163,7 +187,14 @@ top_freq <- topicos %>%
   count(palabra, sort = TRUE)
 top_freq
 
+En este punto, parece apropiado hacer un resumen que nos permita ver el tamaño de los distintos conjuntos d edatos que vamos obteniendo:
 
+## Resumen
+info <- c('Cant. de trabajos','Cant. palab títulos','Cant. palab títulos stopword','Cant. palab títulos únicas','Cant. palab títulos+resumen','Cant. palab títulos+resumen stopword','Cant. palab títulos+resumen únicas','Cant. tópicos','Cant. tópico únicos')
+cant <- c(c(nrow(socio_ar),nrow(palab_tit),nrow(palab_tit_limp),nrow(tit_freq),nrow(palab_tit_res),nrow(palab_tit_res_limp),nrow(tit_res_freq),nrow(topicos),nrow(top_freq)))
+
+resumen <- tibble(col1 = info,col2 = cant)
+resumen
 
 # PROCESAMIENTO 2: Tokenización de términos compuestos
 
@@ -171,100 +202,69 @@ Como hemos visto hasta aquí, trabajar con "bag of word" tiene el inconveniente 
 
 ## Trabajar con bigramas
 
-Obtención de los bigramas de los títulos ordenados por freq
+Obtenemos de los bigramas de los títulos ordenados por freq
 
 ```{r}
 bigram_tit <- palab_tit_limp %>%
+  select (id,palabra) %>%
+  group_by(id) %>%
   mutate(next_word = lead(palabra)) %>%
   filter(!is.na(next_word)) %>%
   mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
-  select(bigram) %>%
-  count(bigram, sort = TRUE)
+  count(id,bigram, sort = TRUE)
 bigram_tit
 ```
 
 Bigramas de los títulos + resumen ordenados por freq
+
 ```{r}
 bigram_tit_res <- palab_tit_res_limp %>%
+  select (id,palabra) %>%
+  group_by(id) %>%
   mutate(next_word = lead(palabra)) %>%
   filter(!is.na(next_word)) %>%
   mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
-  select(bigram) %>%
   count(bigram, sort = TRUE)
 bigram_tit_res
 ```
 
+Agregamos estos resultados al resumen:
+
+resumen <- add_row(resumen,col1 = 'Cant. bigramas títulos con ID',col2 = nrow(bigram_tit_id))
+resumen <- add_row(resumen,col1 = 'Cant. bigramas títulos+resumen con ID',col2 = nrow(bigram_tit_res_id))
+resumen
+
 # PROCESAMIENTO 3: Nubes de palabras
 
-Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos 6 nubes de palabras para poder comparar variantes. Por un lado generaremos 3 nubes, la de los títulos, la de los títulos + resumen y la de tópicos, con aquellos términos que tienen frecuencia mayor a 1. Luego lo repetiremos para aquellos términos con frecuencia mayor a 10.
+Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos 3 nubes de palabras para poder comparar variantes. Generaremos la de los títulos por palabras individuales sin poda de frecuencias. La de los títulos por bigramas y la de tópicos las haremos con frecuencias mayores a 1.
 
-Filtrar palabras con frecuencia mayor a 1 en el títulos:
-```{r}
-bigram_tit_f <- bigram_tit %>%
+# Título
+
+bigram_tit_f <- bigram_tit_id %>%
+  ungroup() %>%
+  select(bigram,n) %>%
   filter(n > 1) 
-```
 
-Ahora en Título + resumen
-```{r}
-bigram_tit_res_f <- bigram_tit_res %>%
-  filter(n > 1) 
-```
-
-Ahora con los tópicos
-```{r}
+# Tópicos
 top_f <- top_freq %>%
   filter(n > 1) 
-```
 
-Creación de la nube de palabras de los títulos:
-```{r}
-wordcloud2(bigram_tit_f, size = 0.7)
-```
+# Crear nube de palabras individuales de los títulos
 
-Ahora de títulos + resumen
-```{r}
-wordcloud2(bigram_tit_f, size = 0.7)
-```
+nube_tit <- wordcloud2(tit_freq, size = 0.7)     
+nube_tit
 
-Ahora de los tópicos
-```{r}
-wordcloud2(bigram_tit_f, size = 0.7)
-```
+# Crear nube de bigramas de título
 
-Ahora hagamosló para frecuencia mayor a 10
+nube_tit_2 <- wordcloud2(bigram_tit_f, size = 0.2) 
+nube_tit_2
 
-Filtrar palabras con frecuencia mayor a 10 en el títulos:
-```{r}
-bigram_tit_f10 <- bigram_tit %>%
-  filter(n > 10) 
-```
+# Tópicos
+nube_top_2 <- wordcloud2(top_f, size = 0.6)
+nube_top_2
 
-Ahora en Título + resumen
-```{r}
-bigram_tit_res_f10 <- bigram_tit_res %>%
-  filter(n > 10) 
-```
 
-Ahora de los tópicos
-```{r}
-top_f10 <- top_f %>%
-  filter(n > 10) 
-```
 
-Creación de la nube de palabras de los títulos:
-```{r}
-wordcloud2(bigram_tit_f10, size = 0.7)
-```
-
-Ahora de títulos + resumen
-```{r}
-wordcloud2(bigram_tit_f10, size = 0.7)
-```
-
-Ahora de los tópicos
-```{r}
-wordcloud2(top_f10, size = 0.7)
-```
 
 ***************************************************************************************************************************************************************************
 ## Grandes modelos de lenguaje 
