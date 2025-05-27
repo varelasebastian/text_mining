@@ -1,8 +1,18 @@
 ---
-title: "Código de seminario TextM 2025"
+title: "Seminario Mineria de texto y modelos de lenguaje - 2025"
+toc: true
+3toc-depth: 3
+author:
+  - name: Sebastián Varela
+      affiliation: IdIHCs / Dpto de Sociología FaHCE UNLP    
+  - name: Claudia González
+      affiliation: IdIHCs / Dpto de Bibliotecología FaHCE UNLP 
+format: pdf
 ---
 
-Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, stopwords, Wordcloud2, textclean. Instalar con cuadros de diálogo y no con código.
+# PARTE I: Minería de textos *(introductorio)*
+
+Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, textclean, stopwords, wordcloud2. Instalar con cuadros de diálogo y no con código.
 
 ```{r, message=FALSE, warning=FALSE}
 library(openalexR)
@@ -87,6 +97,7 @@ Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos pr
 
 Principalmente se realiza una limpieza de los residuos que puedan quedar de HTML
 
+```{r}
 socio_ar_selec$title <- socio_ar_selec$title %>%
   replace_html() %>%
   replace_contraction() %>%
@@ -100,6 +111,7 @@ socio_ar_selec$abstract <- socio_ar_selec$abstract %>%
   replace_non_ascii () %>%
   replace_url () %>%
   replace_email ()
+```
 
 ## Tokenization 
 
@@ -108,11 +120,11 @@ Esto implica separar el texto en palabras. De las 5 variables que tiene nuestro 
 ```{r}
 palab_tit <- socio_ar_selec[, c("id","title")] %>%
   unnest_tokens(palabra,title)
-```
-```{r}
+
 palab_res <- socio_ar_selec[, c("id","abstract")] %>%
   unnest_tokens(palabra,abstract)
 ```
+
 Generamos dos objetos de datos para hacer 2 nubes de palabras distintas. Una que corresponda solo a los títulos, y otra a los títulos y a los resúmenes. Por ello, previamente debemos tener otro objeto que las integre. Estos listados de palabras son dataframes tibble que contienen 2 variables: el id del documento y la palabra. Cómo veremos más adelante, si bien esto es lo que s edenomina una *bag of words*, es imprescindible mantener la información de a que item u observación pertenece cada una. 
 
 ```{r}
@@ -176,26 +188,31 @@ También vamos a aplicar este tipo de análisis sobre la variable topics(Tópico
 **filter** sirve para filtrar por la categoría de tópico. En este caso usaremos "topic"
 **select** para seleccionar las columnas que me interesan 
 
+```{r}
 topicos <- socio_ar_selec %>%
-  unnest_longer (topics) %>%                                                                          
-  mutate(topics_id = topics$id, topics_type = topics$type, topics_name = topics$display_name) %>%     
-  filter(topics_type == "topic") %>%                                                                  
-  select(topics_id,topics_name)                                                                       
-
+  unnest_longer (topics) %>%                                             
+  mutate(topics_id = topics$id, topics_type = topics$type, topics_name =    topics$display_name) %>%     
+  filter(topics_type == "topic") %>%                                           select(topics_id,topics_name)
+```
 Calculamos las frecuencias
 
+```{r}
 top_freq <- topicos %>%
-  count(palabra, sort = TRUE)
+  count(topics_name, sort = TRUE)
 top_freq
+```
 
 En este punto, parece apropiado hacer un resumen que nos permita ver el tamaño de los distintos conjuntos d edatos que vamos obteniendo:
 
 ## Resumen
+
+```{r}
 info <- c('Cant. de trabajos','Cant. palab títulos','Cant. palab títulos stopword','Cant. palab títulos únicas','Cant. palab títulos+resumen','Cant. palab títulos+resumen stopword','Cant. palab títulos+resumen únicas','Cant. tópicos','Cant. tópico únicos')
 cant <- c(c(nrow(socio_ar),nrow(palab_tit),nrow(palab_tit_limp),nrow(tit_freq),nrow(palab_tit_res),nrow(palab_tit_res_limp),nrow(tit_res_freq),nrow(topicos),nrow(top_freq)))
 
 resumen <- tibble(col1 = info,col2 = cant)
 resumen
+```
 
 # PROCESAMIENTO 2: Tokenización de términos compuestos
 
@@ -206,68 +223,74 @@ Como hemos visto hasta aquí, trabajar con "bag of word" tiene el inconveniente 
 Obtenemos de los bigramas de los títulos ordenados por freq
 
 ```{r}
-bigram_tit <- palab_tit_limp %>%
+bigram_tit_id <- palab_tit_limp %>%
   select (id,palabra) %>%
   group_by(id) %>%
   mutate(next_word = lead(palabra)) %>%
   filter(!is.na(next_word)) %>%
   mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
   count(id,bigram, sort = TRUE)
-bigram_tit
+bigram_tit_id
 ```
 
 Bigramas de los títulos + resumen ordenados por freq
 
 ```{r}
-bigram_tit_res <- palab_tit_res_limp %>%
+bigram_tit_res_id <- palab_tit_res_limp %>%
   select (id,palabra) %>%
   group_by(id) %>%
   mutate(next_word = lead(palabra)) %>%
   filter(!is.na(next_word)) %>%
   mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
   count(bigram, sort = TRUE)
-bigram_tit_res
+bigram_tit_res_id
 ```
 
 Agregamos estos resultados al resumen:
 
+```{r}
 resumen <- add_row(resumen,col1 = 'Cant. bigramas títulos con ID',col2 = nrow(bigram_tit_id))
 resumen <- add_row(resumen,col1 = 'Cant. bigramas títulos+resumen con ID',col2 = nrow(bigram_tit_res_id))
 resumen
+```
 
 # PROCESAMIENTO 3: Nubes de palabras
 
 Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos 3 nubes de palabras para poder comparar variantes. Generaremos la de los títulos por palabras individuales sin poda de frecuencias. La de los títulos por bigramas y la de tópicos las haremos con frecuencias mayores a 1.
 
-# Título
-
+```{r}
 bigram_tit_f <- bigram_tit_id %>%
   ungroup() %>%
   select(bigram,n) %>%
   filter(n > 1) 
+```
 
-# Tópicos
+```{r}
 top_f <- top_freq %>%
   filter(n > 1) 
+```
 
-# Crear nube de palabras individuales de los títulos
-
+```{r}
 nube_tit <- wordcloud2(tit_freq, size = 0.7)     
-nube_tit
+```
 
-# Crear nube de bigramas de título
+Con un código similar, se pueden crear, por ejemplo, la de bigramas de títulos y la de tópicos
 
+```{r}
 nube_tit_2 <- wordcloud2(bigram_tit_f, size = 0.2) 
 nube_tit_2
+```
 
-# Tópicos
+```{r}
 nube_top_2 <- wordcloud2(top_f, size = 0.6)
 nube_top_2
-
+```
 
 
 
 ***************************************************************************************************************************************************************************
+# PARTE II: Modelos de lenguaje *(introductorio)*
+
 ## Grandes modelos de lenguaje 
 
 Large Language Models (LLMs) de inteligencia artificial.
