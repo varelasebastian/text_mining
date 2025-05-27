@@ -2,7 +2,7 @@
 title: "Código de seminario TextM 2025"
 ---
 
-Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, stopwords, Wordcloud2. Instalar con cuadros de diálogo y no con código.
+Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, stopwords, Wordcloud2, textclean. Instalar con cuadros de diálogo y no con código.
 
 ```{r, message=FALSE, warning=FALSE}
 library(openalexR)
@@ -110,8 +110,8 @@ palab_tit <- socio_ar_selec[, c("id","title")] %>%
   unnest_tokens(palabra,title)
 ```
 ```{r}
-palab_res <- socio_ar_selec[, c("id","ab")] %>%
-  unnest_tokens(palabra,ab)
+palab_res <- socio_ar_selec[, c("id","abstract")] %>%
+  unnest_tokens(palabra,abstract)
 ```
 Generamos dos objetos de datos para hacer 2 nubes de palabras distintas. Una que corresponda solo a los títulos, y otra a los títulos y a los resúmenes. Por ello, previamente debemos tener otro objeto que las integre. Estos listados de palabras son dataframes tibble que contienen 2 variables: el id del documento y la palabra. Cómo veremos más adelante, si bien esto es lo que s edenomina una *bag of words*, es imprescindible mantener la información de a que item u observación pertenece cada una. 
 
