@@ -11,6 +11,7 @@ library(DataExplorer)
 library(tidytext)
 library(stopwords)
 library(wordcloud2)
+library(textclean)
 ```
 
 # Selección de los datos a trabajar
