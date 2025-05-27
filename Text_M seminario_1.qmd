@@ -10,7 +10,7 @@ author:
 format: pdf
 ---
 
-# PARTE I: Minería de textos *(introductorio)*
+# PARTE I: Minería de textos (introductorio)
 
 Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, textclean, stopwords, wordcloud2. Instalar con cuadros de diálogo y no con código.
 
@@ -30,9 +30,9 @@ library(textclean)
 
 En esta primera parte del seminario realizaremos las prácticas sobre un conjunto de datos textuales que emanan de **registros bibliográficos referenciales sobre sociología argentina**. El concepto de "referencial" es importante para entender que no estamos hablando de textos completos de artículos o libros, sino solo de sus datos bibliográficos: titulo, resumen, keywords, etc. Obedece a que resulta, en terminos prácticos, trabajar con un corpus textual acotado en cuanto a la longitud del texto de cada item, de esa manera se pueden realizar los checkeos de las acciones con mayor facilidad.
 
-La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria.  Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que si resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
+La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria. Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que si resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
 
-OpenAlex (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero con un crecimiento muy acelerado y que ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas. La base se puede consultar mediante una API REST pública, que es gratuita y no requiere autenticación. Sin embargo, tiene limitaciones de velocidad, con un límite de 100.000 llamadas por día y un máximo de 10 llamadas por segundo. Por fuera de eso, ofrece un servicio premium. En nuestro caso, interrogaremos la base de datos utilizando un paquete de R que fue especificamente diseñado para mediar en esta tarea, que se llama **openalexR**. Siemplemente nos exime del uso de la API de forma directa.  
+OpenAlex (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero con un crecimiento muy acelerado y que ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas. La base se puede consultar mediante una API REST pública, que es gratuita y no requiere autenticación. Sin embargo, tiene limitaciones de velocidad, con un límite de 100.000 llamadas por día y un máximo de 10 llamadas por segundo. Por fuera de eso, ofrece un servicio premium. En nuestro caso, interrogaremos la base de datos utilizando un paquete de R que fue especificamente diseñado para mediar en esta tarea, que se llama **openalexR**. Simplemente nos exime del uso de la API de forma directa.  
 
 La estructura de información que maneja esta base de datos tiene cierta complejidad y no es objetivo de este seminario abordarla. Simplemente, nos interesa reforzar la misma idea que ya se transmitió en los seminarios anteriores: que un buen conocimiento de la estructura de información subyacente de cualquier fuente, así como saber cuál es la forma correcta de interrogarla, son aspectos imprescindibles a conocer y que esto antecede a cualquier extracción de datos a los fines de ejecutar análisis serios.
 
@@ -52,7 +52,7 @@ socio_ar <- oa_fetch(abstract.search = "sociología OR sociologia OR sociology O
 
 La función **oa_fetch** es propia del paquete **openalexR** y opera como si fuese una API de consulta a la base de datos, siguiendo los parámetros que se le indican como argumento. 
 
-El resultado que arroja es un objeto R de tipo dataframe tibble, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado 1895 trabajos (aprox. esto puede variar según el momento en el que s ehace la búsqueda y descarga, los cuales quedan descriptos mediante 44 variables: 
+El resultado que arroja es un objeto R de tipo dataframe tibble, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado 1895 trabajos (aprox. esto puede variar según el momento en el que se hace la búsqueda y descarga, los cuales quedan descriptos mediante 44 variables: 
 
 Visualizar las 44 variables que hay en el dataset:
 ```{r}
@@ -91,7 +91,7 @@ socio_ar_selec %>%
 
 # PRE-PROCESAMIENTO
 
-Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que nos conducirán a obtener uno primeros resultados. El primero que proponemos es la generación de la NUBE DE PALABRAS que representa al corpus. Para ello se realizan algunos preprocesamientos como la *cleaning*, *tokenization*, *stopword* 
+Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que nos conducirán a obtener los primeros resultados. El primero que proponemos es la generación de la NUBE DE PALABRAS que representa al corpus. Para ello se realizan algunos preprocesamientos como la *cleaning*, *tokenization*, *stopword* 
 
 ## Limpieza del texto
 
@@ -125,12 +125,13 @@ palab_res <- socio_ar_selec[, c("id","abstract")] %>%
   unnest_tokens(palabra,abstract)
 ```
 
-Generamos dos objetos de datos para hacer 2 nubes de palabras distintas. Una que corresponda solo a los títulos, y otra a los títulos y a los resúmenes. Por ello, previamente debemos tener otro objeto que las integre. Estos listados de palabras son dataframes tibble que contienen 2 variables: el id del documento y la palabra. Cómo veremos más adelante, si bien esto es lo que s edenomina una *bag of words*, es imprescindible mantener la información de a que item u observación pertenece cada una. 
+Generamos dos objetos de datos para hacer 2 nubes de palabras distintas. Una que corresponda solo a los títulos, y otra a los títulos y a los resúmenes. Por ello, previamente debemos tener otro objeto que las integre. Estos listados de palabras son dataframes tibble que contienen 2 variables: el id del documento y la palabra. Cómo veremos más adelante, si bien esto es lo que se denomina una *bag of words*, es imprescindible mantener la información de a qué item u observación pertenece cada una. 
 
 ```{r}
 palab_tit_res <- bind_rows(palab_tit, palab_res)
 ```
-## Stopword
+
+## Stopwords
 
 Aplicar stopword es eliminar del listado general de palabras (o *bag of words*) aquellas que no tienen demasiada carga de sentido, tales como artículos, preposiciones, pronombres, etc. Para poder hacer esa tarea se debe saber cuales son esas palabras, y por ello, previamente, debemos contar con los listados en cada uno de los idiomas que están representados en el corpus:
 
@@ -142,6 +143,7 @@ stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"))
 stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"))
 stopwords_de <- tibble(palabra = stopwords::stopwords("de"))
 ```
+
 Una vez que tenemos los listados, podemos proceder a la eliminación. Lo haremos sobre el objeto que contiene las palabras de los títulos, por un lado, y en el objeto que tiene las de los títulos y resumenes, integradas. Esto lo hacemos para generar análisis comparativos.
 
 ```{r}
@@ -166,7 +168,7 @@ palab_tit_res_limp <- palab_tit_res %>%
 
 # PROCESAMIENTO 1: Análisis de frecuencia
 
-Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. El anmás simple es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable topics. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. 
+Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. El más simple es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable topics. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. 
 La cantidad de observaciones que obtenemos nos está indicando la cantidad de palabras diferentes que contiene la variable(s) analizadas en la totalidad del corpus.
 
 ```{r}
@@ -181,12 +183,12 @@ tit_res_freq <- palab_tit_res_limp %>%
 tit_res_freq
 ```
 
-También vamos a aplicar este tipo de análisis sobre la variable topics(Tópicos). Si bien provee menos cantidad de texto que las variables título y resúmen, como no la hemos tokenizado, mantiene aún el vínculo entre los términos compuestos. Esta variable es un dataframe tibble en sí misma, es decir que estamos frente a un anidamiento de dataframes. Cuando la exploramos, vemos que los términos aparecen calificados con un "tipo". Los tipos se adjudican por especificidad creciente: dominio, campo, subcampo y tópico. Aquí nos interesa analisar los más específicos, es decir, aquellos que están calificados con el 4to nivel (tópic). Para ello generamos el objeto tópicos. Vemos que necesitamos escribir un poco más de código por esa condición de no ser una columna normal de un dataframe, sino de ser una columna que contiene a su vez un dataframe adentro (dataframe anidado): 
+También vamos a aplicar este tipo de análisis sobre la variable topics (Tópicos). Si bien provee menos cantidad de texto que las variables título y resúmen, como no la hemos tokenizado, mantiene aún el vínculo entre los términos compuestos. Esta variable es un dataframe tibble en sí misma, es decir que estamos frente a un anidamiento de dataframes. Cuando la exploramos, vemos que los términos aparecen calificados con un "tipo". Los tipos se adjudican por especificidad creciente: dominio, campo, subcampo y tópico. Aquí nos interesa analizar los más específicos, es decir, aquellos que están calificados con el 4to nivel (tópic). Para ello generamos el objeto tópicos. Vemos que necesitamos escribir un poco más de código por esa condición de no ser una columna normal de un dataframe, sino de ser una columna que contiene a su vez un dataframe adentro (dataframe anidado): 
 
-**unnest** permite desplegar el dataframe dentro del dataframe general
-**mutate** sirve para renombrar las columnas
-**filter** sirve para filtrar por la categoría de tópico. En este caso usaremos "topic"
-**select** para seleccionar las columnas que me interesan 
+* **unnest** permite desplegar el dataframe dentro del dataframe general
+* **mutate** sirve para renombrar las columnas (transformando las originales)
+* **filter** sirve para filtrar por la categoría de tópico. En este caso usaremos "topic"
+* **select** para seleccionar las columnas que me interesan 
 
 ```{r}
 topicos <- socio_ar_selec %>%
@@ -194,6 +196,7 @@ topicos <- socio_ar_selec %>%
   mutate(topics_id = topics$id, topics_type = topics$type, topics_name =    topics$display_name) %>%     
   filter(topics_type == "topic") %>%                                           select(topics_id,topics_name)
 ```
+
 Calculamos las frecuencias
 
 ```{r}
@@ -202,12 +205,13 @@ top_freq <- topicos %>%
 top_freq
 ```
 
-En este punto, parece apropiado hacer un resumen que nos permita ver el tamaño de los distintos conjuntos d edatos que vamos obteniendo:
+En este punto, parece apropiado hacer un resumen que nos permita ver el tamaño de los distintos conjuntos de datos que vamos obteniendo:
 
 ## Resumen
 
 ```{r}
 info <- c('Cant. de trabajos','Cant. palab títulos','Cant. palab títulos stopword','Cant. palab títulos únicas','Cant. palab títulos+resumen','Cant. palab títulos+resumen stopword','Cant. palab títulos+resumen únicas','Cant. tópicos','Cant. tópico únicos')
+
 cant <- c(c(nrow(socio_ar),nrow(palab_tit),nrow(palab_tit_limp),nrow(tit_freq),nrow(palab_tit_res),nrow(palab_tit_res_limp),nrow(tit_res_freq),nrow(topicos),nrow(top_freq)))
 
 resumen <- tibble(col1 = info,col2 = cant)
@@ -216,7 +220,7 @@ resumen
 
 # PROCESAMIENTO 2: Tokenización de términos compuestos
 
-Como hemos visto hasta aquí, trabajar con "bag of word" tiene el inconveniente de la desvinculación de las palabras que componen términos copuestos. Un tipo de procesamiento que se puede aplicar para tratar de encontrar una mejora en este sentido, es con la detección de bigramas, es decir con ventanas de dos palabras. También podrían ser tri-gramas, cuatri-gramas, y así. 
+Como hemos visto hasta aquí, trabajar con "bag of word" tiene el inconveniente de la desvinculación de las palabras que componen términos compuestos. Un tipo de procesamiento que se puede aplicar para tratar de encontrar una mejora en este sentido, es con la detección de bigramas, es decir con ventanas de dos palabras. También podrían ser tri-gramas, cuatri-gramas, y así. 
 
 ## Trabajar con bigramas
 
@@ -271,7 +275,8 @@ top_f <- top_freq %>%
 ```
 
 ```{r}
-nube_tit <- wordcloud2(tit_freq, size = 0.7)     
+nube_tit <- wordcloud2(tit_freq, size = 0.7)  
+nube_tit
 ```
 
 Con un código similar, se pueden crear, por ejemplo, la de bigramas de títulos y la de tópicos
