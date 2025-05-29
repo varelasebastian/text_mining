@@ -1,111 +1,176 @@
 ---
-title: "Seminario Mineria de texto y modelos de lenguaje - 2025"
+title: "Seminario Mineria de texto y modelos de lenguaje 2025"
 toc: true
 3toc-depth: 3
+toc-title: "Tabla de contenidos"
 author:
-  - name: Sebastián Varela
-      affiliation: IdIHCs / Dpto de Sociología FaHCE UNLP    
-  - name: Claudia González
-      affiliation: IdIHCs / Dpto de Bibliotecología FaHCE UNLP 
-format: pdf
+  - name: "Sebastián Varela"
+    affiliation: "IdIHCs / Dpto de Sociología FaHCE UNLP"    
+  - name: "Claudia González"
+    affiliation: "IdIHCs / Dpto de Bibliotecología FaHCE UNLP" 
+format: 
+  pdf: 
+    geometry: 
+      - top=2cm
+      - bottom=2cm
+      - left=2cm
+      - right=2cm
 ---
 
-# PARTE I: Minería de textos (introductorio)
+# **PARTE I:** MINERIA DE TEXTOS *(introductorio)*
+**por Claudia M. González**
 
-Se requieren los paquetes openalexR, tidyverse, DataExplorer, tidytext, textclean, stopwords, wordcloud2. Instalar con cuadros de diálogo y no con código.
+# Introducción
+
+La minería de textos 
+...
+
+# Objetivo del módulo
+
+En esta primera parte del seminario se revisarán algunas de las técnicas más tradicionales de la minería textual, así como los tratamiento previos más habituales a los que se someten los corpus textuales antes de ser analizados.
+
+Se parte por conformar un conjunto de datos que se utilizará como caso de análisis en todo el módulo. De manera independiente a que los resultados obtenidos sean interesantes o no, su uso obedece a cuestiones meramente didácticas.
+
+Durante los ejercicios se trabajará con diversos paquetes, los cuales deberán estar instalados previamente haciendo uso de los cuadros de diálogo de R Studio (opción Tools). A continuación se brinda una muy breve descripción de cada uno.
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+**Tidyverse** es una colección de paquetes de R para la importación, transformación, manipulación y visualización de datos ordenados. 
 
 ```{r, message=FALSE, warning=FALSE}
 library(openalexR)
-library(tidyverse)
+```
+
+**OpenalexR** es un paquete que permite recuperar información de la base de datos Open Alex y deja los datos preparados para ser manipulados en R base o por otros paquetes.
+
+```{r, message=FALSE, warning=FALSE}
 library(DataExplorer)
-library(tidytext)
-library(stopwords)
-library(wordcloud2)
+```
+
+**DataExplorer** permite obtener salidas visuales útiles al realizar una primera exploración del conjunto de datos.
+
+```{r, message=FALSE, warning=FALSE}
 library(textclean)
 ```
 
+**Textclean** permite detectar subcadenas cuya presencia no ayuda al momento del análisis. Puede borrarlas o normalizarlas.
+
+```{r, message=FALSE, warning=FALSE}
+library(tidytext)
+```
+
+**Tidytext** Entre sus principales funciones se encuentran las dedicadas a diferentes niveles de tokenización.
+
+```{r, message=FALSE, warning=FALSE}
+library(stopwords)
+```
+
+**Stopword** permite aplicar la limpieza de palabras no significativas en diferentes idiomas.
+
+```{r, message=FALSE, warning=FALSE}
+library(SnowballC)
+```
+
+**SnowballC** se utiliza para lematizar o llevar cada palabra a su raíz lingüistica 
+
+```{r, message=FALSE, warning=FALSE}
+library(wordcloud2)
+library(webshot2)
+library(htmlwidgets)
+```
+
+**wordcloud2** permite generar nubes de palabras. Los otros dos paquetes son necesarios para que las nubes se puedan imprimir en el PDF de salida.
+
+```{r}
+library(quanteda) 
+library(quanteda.textstats)
+library(quanteda.textplots)
+```
+
+
 # Selección de los datos a trabajar
 
-## Seleccionar la fuente
+## Seleccionar la fuente de datos
 
-En esta primera parte del seminario realizaremos las prácticas sobre un conjunto de datos textuales que emanan de **registros bibliográficos referenciales sobre sociología argentina**. El concepto de "referencial" es importante para entender que no estamos hablando de textos completos de artículos o libros, sino solo de sus datos bibliográficos: titulo, resumen, keywords, etc. Obedece a que resulta, en terminos prácticos, trabajar con un corpus textual acotado en cuanto a la longitud del texto de cada item, de esa manera se pueden realizar los checkeos de las acciones con mayor facilidad.
+En esta primera parte del seminario realizaremos las prácticas sobre un conjunto de datos textuales que emanan de **registros bibliográficos referenciales sobre sociología argentina**. El concepto de *referencial* es importante para entender que no estamos hablando de textos completos de artículos o libros, sino solo de sus datos bibliográficos: titulo, resumen, keywords, etc. Obedece a que resulta, en terminos prácticos, trabajar con un corpus textual acotado en cuanto a la longitud del texto de cada item, de esa manera se pueden realizar los checkeos de las acciones con mayor facilidad.
 
-La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria. Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que si resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
+La elección de la temática de la producción argentina sobre temas sociológicos es totalmente arbitraria. Podríamos haber aplicado cualquier otro recorte que desearamos. Lo que sí resulta determinante, es que elegimos **OpenAlex** como fuente donde realizar la búsqueda.
 
-OpenAlex (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero con un crecimiento muy acelerado y que ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas. La base se puede consultar mediante una API REST pública, que es gratuita y no requiere autenticación. Sin embargo, tiene limitaciones de velocidad, con un límite de 100.000 llamadas por día y un máximo de 10 llamadas por segundo. Por fuera de eso, ofrece un servicio premium. En nuestro caso, interrogaremos la base de datos utilizando un paquete de R que fue especificamente diseñado para mediar en esta tarea, que se llama **openalexR**. Simplemente nos exime del uso de la API de forma directa.  
+**OpenAlex** (https://openalex.org) es una base de datos bibliográfica abierta, de alcance global, de reciente gestación (2022), pero que ha tenido un crecimiento muy acelerado. Ofrece en la actualidad más de 250 millones de registros bibliográficos de producción científica de todo el mundo. Es multidiciplinar y pone su esfuerzo en incluir materiales en otros idiomas además del inglés. Tuvo su origen en Microsoft Academic Graph, producto que se discontinuó, y sirvió de base para iniciar este mega proyecto que cosecha más de 250 mil fuentes distintas. La base se puede consultar mediante una API REST pública, que es gratuita y no requiere autenticación. Sin embargo, tiene limitaciones de velocidad, con un límite de 100.000 llamadas por día y un máximo de 10 llamadas por segundo. Por fuera de eso, ofrece un servicio premium. En nuestro caso, interrogaremos la base de datos utilizando un paquete de R que fue especificamente diseñado para mediar en esta tarea, que se llama **openalexR**. Siemplemente nos exime del uso de la API de forma directa.
 
 La estructura de información que maneja esta base de datos tiene cierta complejidad y no es objetivo de este seminario abordarla. Simplemente, nos interesa reforzar la misma idea que ya se transmitió en los seminarios anteriores: que un buen conocimiento de la estructura de información subyacente de cualquier fuente, así como saber cuál es la forma correcta de interrogarla, son aspectos imprescindibles a conocer y que esto antecede a cualquier extracción de datos a los fines de ejecutar análisis serios.
 
 ## Buscar lo que interesa
 
-Al trabajar con una fuente multilingue, una primera decisión es determinar los idiomas que nos interesan que estén representados en nuestro conjunto de producción científica. En este caso, utilizaremos como término de búsqueda las versiones correspondientes a los idiomas español, inglés, italiano, francés, portugués y alemán. Al incluir esos idiomas, consideramos que estamos recogiendo la mayoría de la producción de nuestros autores argentinos.
+Al trabajar con una fuente multilingüe, una primera decisión es determinar los idiomas que nos interesan que estén representados en nuestro conjunto de producción científica. En este caso, utilizaremos como término de búsqueda las versiones correspondientes a los idiomas español, inglés, italiano, francés, portugués y alemán. Al incluir esos idiomas, consideramos que estamos recogiendo la mayoría de la producción de nuestros autores argentinos.
 
-Otro aspecto importante es tener claro cuales son los campos de datos de la base de datos que se utilizan en la interrogación. Solo para dar ejemplos de variantes posibles, una cosa es buscar un *string* únicamente en los títulos, otro que aparezca en los resúmenes o en ambos. Recordemos que cada campo de una base de datos es una unidad lógica que puede ser explotada individualmente, o en conjunto con otras, si es que usamos operaciones lógicas Booleanas (AND, OR, NOT), por ejemplo. Sin embargo, estas cuestiones no siempre son tan transparentes en los productos y es necesario, como ya se dijo, conocer perfectamente la fuente por las implicancias que tiene a los fines de la recuperación de información.
+Otro aspecto importante es tener claro cuales son los campos de datos de la base de datos que se utilizan en la interrogación. Solo para dar ejemplos de variantes posibles, una cosa es buscar un *string* únicamente en los títulos, otro que aparezca en los resúmenes o en ambos. Recordemos que cada campo de una base de datos es una unidad lógica que puede ser explotada individualmente, o en conjunto con otras, si es que usamos operaciones lógicas Booleanas (AND, OR, NOT), por ejemplo. Sin embargo, estas cuestiones no siempre son tan transparentes en los productos y es necesario, como ya se dijo, conocer lo mejor que se pueda la fuente por las implicancias que tiene a los fines de la recuperación de información.
 
-En nuestro caso utilizaremos una forma de búsqueda muy sencilla, en la que indicamos que queremos obtener los registros bibliográficos de trabajos que contienen en el resumen "Sociología" o sus variantes en los idiomas antes indicados: sociología (ES), sociology (EN), sociologie (FR), sociologia (IT y PT) y soziologie (DE). Claramente está es una expresión de búsqueda muy rudimentaria, que está lejos de dar cuenta de la producción científica argentina sobre sociología, pero solo la tomamos como un ejemplo funcional a nuestra causa de colecta de datos a trabajar. 
+En nuestro caso utilizaremos una forma de búsqueda muy sencilla, en la que indicamos que queremos obtener los registros bibliográficos de trabajos que contienen en el resumen "Sociología" o sus variantes en los idiomas antes indicados: sociología (ES), sociology (EN), sociologie (FR), sociologia (IT y PT) y soziologie (DE). Claramente está es una expresión de búsqueda muy rudimentaria que está lejos de dar cuenta de la producción científica argentina sobre Sociología, pero solo la tomamos como un ejemplo funcional a nuestra causa de colecta de datos a trabajar.
 
 El otro elemento que se incluye en la búsqueda, es la restricción de que los trabajos a recuperar deben tener al menos un autor que acompaña su firma con un lugar de trabajo en Argentina.
 
 ```{r}
-socio_ar <- oa_fetch(abstract.search = "sociología OR sociologia OR sociology OR sociologie OR soziologie", authorships.institutions.country_code = "AR")
+socio_ar <- oa_fetch(abstract.search = "sociología OR sociologia OR sociology OR sociologie OR soziologie",
+                     authorships.institutions.country_code = "AR")
 ```
 
-La función **oa_fetch** es propia del paquete **openalexR** y opera como si fuese una API de consulta a la base de datos, siguiendo los parámetros que se le indican como argumento. 
+La función **oa_fetch** es propia del paquete **openalexR** y opera como si fuese una API de consulta a la base de datos, siguiendo los parámetros que se le indican como argumento.
 
-El resultado que arroja es un objeto R de tipo dataframe tibble, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado 1895 trabajos (aprox. esto puede variar según el momento en el que se hace la búsqueda y descarga, los cuales quedan descriptos mediante 44 variables: 
+El resultado que arroja es un objeto R de tipo dataframe tibble, que de ahora en más pasa a constituir nuestro dataset de trabajo. Al mirarlo, comprobamos que hemos descargado 1895 trabajos los cuales están descriptos por 44 variables. La cantidad de trabajos puede variar según el momento en el que se hace la búsqueda y descarga.
 
-Visualizar las 44 variables que hay en el dataset:
+Para visualizar las 44 variables que hay en el dataset:
+
 ```{r}
 names(socio_ar)
 ```
 
-Para nuestro ejercicio, vamos a trabajar con todas las observaciones pero no con todas las variables. Nos quedaremos solo con alguna básicas: el identificador del trabajo, el título, el resumen, los topicos y el año de publicación
+En nuestro ejercicio, vamos a trabajar con todas las observaciones, pero no con todas las variables. Nos quedaremos solo con alguna básicas: el identificador del trabajo, el título, el resumen, los tópicos y el idioma del documento.
 
-seleccionar las que interesan
+Para seleccionar las variables que interesan:
+
 ```{r}
 socio_ar_selec <- socio_ar %>% 
-  select(id,title,abstract,topics,publication_year)
+  select(id,title,abstract,topics,language)
 ```
 
 ## Análisis de valores perdidos
 
-Una primera exploración sobre los datos que siempre es aconsejable hacer es el análisis de valores perdidos: 
-
-```{r}
-socio_ar_selec %>%
-  summarise(across(everything(), ~ mean(is.na(.)), .names = "prop_na_{col}"))
-```
-
-Para visualir la proporción de faltantes de manera gráfica, se necesita el paquete DataExplorer. En este caso ya está instalado y corriendo.
+Una primera exploración sobre los datos que siempre es aconsejable hacer es el análisis de valores perdidos. Para visualir la proporción de faltantes de manera gráfica, se necesita el paquete DataExplorer. En este caso ya está instalado y corriendo.
 
 ```{r, fig.width=5}
 plot_missing(socio_ar_selec) 
 ```
 
-Para saber que trabajos son a los que le falta un dato, que de acuerdo a como lo muestra el gráfico anterior corresponde al título:
+Para saber que trabajos son a los que le falta un dato, que de acuerdo a como lo muestra el gráfico anterior corresponde al campo título e idioma:
 
 ```{r}
 socio_ar_selec %>%
   filter(if_any(everything(), is.na))
 ```
 
-# PRE-PROCESAMIENTO
+Si se toma los últimos dígitos del ID de los trabajos, se puede buscar por cuadro de diálogo en el dataset para verificar que efectivamente son registros sin títulos o sin idioma.
 
-Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que nos conducirán a obtener los primeros resultados. El primero que proponemos es la generación de la NUBE DE PALABRAS que representa al corpus. Para ello se realizan algunos preprocesamientos como la *cleaning*, *tokenization*, *stopword* 
+# Pre-procesamiento de los textos
+
+Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que es necesario hacer antes de tratar de obtener unos primeros resultados. Para ello se realizan algunas tareas que permiten quitarle "ruido" al texto. Estas tareas son la **limpieza**, la ***tokenization***, la aplicación de ***stopword*** y el ***stemming***.
 
 ## Limpieza del texto
 
-Principalmente se realiza una limpieza de los residuos que puedan quedar de HTML
+Principalmente se realiza una limpieza de los residuos que puedan quedar de HTML y de tildes:
 
 ```{r}
-socio_ar_selec$title <- socio_ar_selec$title %>%
+socio_ar_selec_limp$title <- socio_ar_selec$title %>%
   replace_html() %>%
   replace_contraction() %>%
   replace_non_ascii () %>%
   replace_url () %>%
   replace_email ()
+
   
-socio_ar_selec$abstract <- socio_ar_selec$abstract %>%
+socio_ar_selec_limp$abstract <- socio_ar_selec$abstract %>%
   replace_html() %>%
   replace_contraction() %>%
   replace_non_ascii () %>%
@@ -113,63 +178,227 @@ socio_ar_selec$abstract <- socio_ar_selec$abstract %>%
   replace_email ()
 ```
 
-## Tokenization 
+## Tokenization
 
-Esto implica separar el texto en palabras. De las 5 variables que tiene nuestro corpus, solo 2 contienen textos ricos: los títulos y los resúmenes. Los tópicos, por el contrario son en muchos casos términos compuestos que no sería adecuado separar. Por ahora los excluímos.
+Esto implica separar el texto en partes más pequeñas. Lo usual es hacerlo por palabras. Produce lo que se denomina una *bag of words* (BOW) o bolsa de palabras, que significa simplemente que se rompen las relaciones gramaticales que normalmente existen en el texto que integran. De las 6 variables que tiene nuestro corpus, solo 2 contienen textos ricos: los títulos y los resúmenes. Los tópicos, por el contrario son en muchos casos términos compuestos que no sería adecuado separar. Mientras título y resumen obedecen al lenguaje natural, los tópicos, por el contrario, obedecen al lenguaje controlado y eso tiene efectos diferentes como ya veremos. Por ahora excluímos los tópicos de la tokenización. Sin embargo, vamos a mantener la información de ID del documento y del idioma.
+
+Para tokenizar por palabras:
 
 ```{r}
-palab_tit <- socio_ar_selec[, c("id","title")] %>%
+palab_tit <- socio_ar_selec[, c("id","title","language")] %>%
   unnest_tokens(palabra,title)
 
-palab_res <- socio_ar_selec[, c("id","abstract")] %>%
+palab_res <- socio_ar_selec[, c("id","abstract","language")] %>%
   unnest_tokens(palabra,abstract)
 ```
 
-Generamos dos objetos de datos para hacer 2 nubes de palabras distintas. Una que corresponda solo a los títulos, y otra a los títulos y a los resúmenes. Por ello, previamente debemos tener otro objeto que las integre. Estos listados de palabras son dataframes tibble que contienen 2 variables: el id del documento y la palabra. Cómo veremos más adelante, si bien esto es lo que se denomina una *bag of words*, es imprescindible mantener la información de a qué item u observación pertenece cada una. 
+Se generan dos objetos de datos para que luego se pueda comparar resultados. Uno corresponde a los títulos de los trabajos tokenizados, y el otro a los títulos + los resúmenes tokenizados. Estos listados de palabras son dataframes tibble que contienen 3 variables: el id del documento, la palabra y el idioma. Mantener la información del item u observación que aporta cada una de las palabras es lo que hace a la idea de **corpus**. Un **corpus** hace referencia a un conjunto de textos que durante ciertos tratamientos no deben perder su identidad, es decir que se pueden tratar como pequeñas BOW documento por documento. Al sumar título y resumen, consideramos que la repetición de términos en uno y otro campo servirá para reforzar de lo que trata el documento.
+
+Para unir los títulos con los resúmenes:
 
 ```{r}
 palab_tit_res <- bind_rows(palab_tit, palab_res)
 ```
 
-## Stopwords
+## Stopword
 
-Aplicar stopword es eliminar del listado general de palabras (o *bag of words*) aquellas que no tienen demasiada carga de sentido, tales como artículos, preposiciones, pronombres, etc. Para poder hacer esa tarea se debe saber cuales son esas palabras, y por ello, previamente, debemos contar con los listados en cada uno de los idiomas que están representados en el corpus:
+Aplicar stopword es eliminar del listado general de palabras (o *bag of words*) aquellas que no tienen demasiada carga de sentido, tales como artículos, preposiciones, pronombres, etc. Para poder hacer esa tarea, se necesita contar previamente con listados de palabras a eliminar en cada idioma.
+
+En este caso nos interesan los idiomas que están representados en nuestro corpus:
 
 ```{r}
-stopwords_es <- tibble(palabra = stopwords::stopwords("es"))
-stopwords_en <- tibble(palabra = stopwords::stopwords("en"))
-stopwords_it <- tibble(palabra = stopwords::stopwords("it"))
-stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"))
-stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"))
-stopwords_de <- tibble(palabra = stopwords::stopwords("de"))
+stopwords_es <- tibble(palabra = stopwords::stopwords("es"),language = "es")
+stopwords_en <- tibble(palabra = stopwords::stopwords("en"),language = "en")
+stopwords_it <- tibble(palabra = stopwords::stopwords("it"),language = "it")
+stopwords_fr <- tibble(palabra = stopwords::stopwords("fr"),language = "fr")
+stopwords_pt <- tibble(palabra = stopwords::stopwords("pt"),language = "pt")
+stopwords_de <- tibble(palabra = stopwords::stopwords("de"),language = "de")
 ```
 
-Una vez que tenemos los listados, podemos proceder a la eliminación. Lo haremos sobre el objeto que contiene las palabras de los títulos, por un lado, y en el objeto que tiene las de los títulos y resumenes, integradas. Esto lo hacemos para generar análisis comparativos.
+Una vez que tenemos los listados, podemos proceder a la eliminación, la que simplemente se realiza por comparación de string de caracteres. Lo haremos sobre el conjunto de datos que contiene las palabras de los títulos, por un lado, y en el conjunto que tiene las palabras de los títulos + resúmenes. 
+
+Para aplicar stopword usamos el anti_join, que sirve para filtrar las filas de un dataframe en función de que no estén presentes en otro. Lo hacemos por idiomas: 
 
 ```{r}
+limp_tit_es <- palab_tit %>% 
+  filter(language == "es") %>%
+  anti_join(stopwords_es, by = "palabra") 
+
+limp_tit_es 
+
+limp_tit_res_es <- palab_tit_res %>% 
+  filter(language == "es") %>%
+  anti_join(stopwords_es, by = "palabra") 
+
+limp_tit_en <- palab_tit %>% 
+  filter(language == "en") %>%
+  anti_join(stopwords_en, by = "palabra") 
+
+limp_tit_res_en <- palab_tit_res %>% 
+  filter(language == "en") %>%
+  anti_join(stopwords_en, by = "palabra") 
+
+limp_tit_fr <- palab_tit %>% 
+  filter(language == "fr") %>%
+  anti_join(stopwords_fr, by = "palabra") 
+
+limp_tit_res_fr <- palab_tit_res %>% 
+  filter(language == "fr") %>%
+  anti_join(stopwords_fr, by = "palabra") 
+
+limp_tit_it <- palab_tit %>% 
+  filter(language == "it") %>%
+  anti_join(stopwords_it, by = "palabra") 
+
+limp_tit_res_it <- palab_tit_res %>% 
+  filter(language == "it") %>%
+  anti_join(stopwords_it, by = "palabra") 
+
+limp_tit_pt <- palab_tit %>% 
+  filter(language == "pt") %>%
+  anti_join(stopwords_pt, by = "palabra") 
+
+limp_tit_res_pt <- palab_tit_res %>% 
+  filter(language == "pt") %>%
+  anti_join(stopwords_pt, by = "palabra") 
+
+limp_tit_de <- palab_tit %>% 
+  filter(language == "de") %>%
+  anti_join(stopwords_de, by = "palabra") 
+
+limp_tit_res_de <- palab_tit_res %>% 
+  filter(language == "de") %>%
+  anti_join(stopwords_de, by = "palabra") 
+```
+
+* [caso a revisar 502678 título en español, abstract en inglés, language en o 610174 título y resumen en inglés, language es]
+
+Juntamos los conjuntos de todos los idiomas en uno general. Lo hacemos tanto para título como para título + resumen:
+
+```{r}
+palab_tit_limp <- bind_rows(limp_tit_es,                        limp_tit_en,limp_tit_fr,limp_tit_it,limp_tit_pt)
+
+palab_tit_res_limp <- bind_rows(limp_tit_res_es,
+limp_tit_res_en,limp_tit_res_fr,limp_tit_res_it,limp_tit_res_pt)
+
 palab_tit_limp <- palab_tit %>%
   anti_join(stopwords_es, by = "palabra") %>%
-  anti_join(stopwords_en, by = "palabra") %>%
-  anti_join(stopwords_fr, by = "palabra") %>%
-  anti_join(stopwords_it, by = "palabra") %>%
-  anti_join(stopwords_pt, by = "palabra") %>%
-  anti_join(stopwords_de, by = "palabra")
+  anti_join(stopwords_en, by = "palabra") 
+  
+palab_tit_res_limp <- palab_tit_res %>%
+  anti_join(stopwords_es, by = "palabra") %>%
+  anti_join(stopwords_en, by = "palabra")  
+```
+
+## n-gramas (tokenización de términos compuestos)
+
+Como hemos visto hasta aquí, trabajar con **bag of words** tiene el inconveniente de la desvinculación de las palabras que componen términos copuestos. Un tipo de procesamiento que se puede aplicar para tratar de encontrar una mejora en este sentido, es con la detección de bigramas, es decir con ventanas de dos palabras. También podrían ser tri-gramas, cuatri-gramas, y así.
+
+a - Obtenemos los bigramas de los títulos ordenados por freq
+
+```{r}
+bigram_tit_id <- palab_tit_limp %>%
+  select (id,palabra) %>%
+  group_by(id) %>%
+  mutate(next_word = lead(palabra)) %>%
+  filter(!is.na(next_word)) %>%
+  mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
+  count(id,bigram, sort = TRUE)
+bigram_tit_id
+```
+
+b - Bigramas de los títulos + resumen ordenados por freq
+
+```{r}
+bigram_tit_res_id <- palab_tit_res_limp %>%
+  select (id,palabra) %>%
+  group_by(id) %>%
+  mutate(next_word = lead(palabra)) %>%
+  filter(!is.na(next_word)) %>%
+  mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
+  count(bigram, sort = TRUE)
+```
+
+## Stemming
+
+El *stemming* es el proceso de reducción de las variantes de las palabras hasta llegar a obtener el lema (entrada de diccionario). Los algoritmos que existen basan su procedimiento en la eliminación de prefijos o sufijo haciendo chequeos contra listas de comprobación y aplican algunas reglas propias por idioma. Se debe tener en cuenta que esto muchas veces hace que lo que se obtiene finalmente no sean palabras reales. Si bien el fin último es la lematización -llegar a entradas de diccionario-, no siempre es posible, y como es de esperar, los algoritmos trabajan mejor en el idioma inglés. El algoritmo más usado es el de Porter (1980), pero también son conocidos los llamados **S**, **Lovins** y **snowball**.
+
+Aplicamos el stemming **snowball** de manera separada por idiomas:
+
+```{r}
+stem_tit_es <- palab_tit_limp %>%
+  filter(language == "es") %>%
+  mutate(stem = wordStem(palabra,language = "spanish"))
+
+stem_tit_res_es <- palab_tit_res_limp %>%
+  filter(language == "es") %>%
+  mutate(stem = wordStem(palabra,language = "spanish"))
+
+stem_tit_es  
 ```
 
 ```{r}
-palab_tit_res_limp <- palab_tit_res %>%
-  anti_join(stopwords_es, by = "palabra") %>%
-  anti_join(stopwords_en, by = "palabra") %>%
-  anti_join(stopwords_fr, by = "palabra") %>%
-  anti_join(stopwords_it, by = "palabra") %>%
-  anti_join(stopwords_pt, by = "palabra") %>%
-  anti_join(stopwords_de, by = "palabra")  
+stem_tit_fr <- palab_tit_limp %>%
+  filter(language == "fr") %>%
+  mutate(stem = wordStem(palabra,language = "french"))
+
+stem_tit_res_fr <- palab_tit_res_limp %>%
+  filter(language == "fr") %>%
+  mutate(stem = wordStem(palabra,language = "french"))
+
+stem_tit_fr  
 ```
 
-# PROCESAMIENTO 1: Análisis de frecuencia
+```{r}
+stem_tit_it <- palab_tit_limp %>%
+  filter(language == "it") %>%
+  mutate(stem = wordStem(palabra,language = "italian"))
 
-Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. El más simple es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable topics. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. 
-La cantidad de observaciones que obtenemos nos está indicando la cantidad de palabras diferentes que contiene la variable(s) analizadas en la totalidad del corpus.
+stem_tit_res_it <- palab_tit_res_limp %>%
+  filter(language == "it") %>%
+  mutate(stem = wordStem(palabra,language = "italian"))
+```
+
+```{r}
+stem_tit_en <- palab_tit_limp %>%
+  filter(language == "en") %>%
+  mutate(stem = wordStem(palabra,language = "english"))
+
+stem_tit_res_en <- palab_tit_res_limp %>%
+  filter(language == "en") %>%
+  mutate(stem = wordStem(palabra,language = "english"))
+```
+
+```{r}
+stem_tit_pt <- palab_tit_limp %>%
+  filter(language == "pt") %>%
+  mutate(stem = wordStem(palabra,language = "portuguese"))
+
+stem_tit_res_pt <- palab_tit_res_limp %>%
+  filter(language == "pt") %>%
+  mutate(stem = wordStem(palabra,language = "portuguese"))
+```
+
+Para el idioma alemán no lo hacemos, porque hemos verificado que en este corpus no existen trabajos en alemán.
+
+Las volvemos a juntar en un solo dataframe
+
+```{r}
+palab_tit_stem <- bind_rows(stem_tit_es,stem_tit_en,stem_tit_fr,stem_tit_it,stem_tit_pt)
+  
+palab_tit_res_stem <- bind_rows(stem_tit_res_es,stem_tit_res_en,stem_tit_res_fr,stem_tit_res_it,stem_tit_res_pt)
+```
+
+# Técnicas
+
+## Frecuencias y nubes de palabras
+
+### Conteo de frecuencias
+El conteo de frecuencias de palabras es el análisis más básico. La generación de NUBE DE PALABRAS que representa al corpus, es la expresión gráfica asociada.
+
+Con los dos pasos anteriores -el de la tokenización y el de la eliminación de palabras no significativas-, hemos terminado de preparar la versión más simple de nuestro datos. Lo más simple es realizar un conteo de frecuencia de palabras como para ver si esa información nos dice algo sobre los perfiles temáticos de la producción científica argentina sobre Sociología. Vamos a incorporar en este análisis tambien la variable topics. Si bien provee menos cantidad de texto, como no la hemos tokenizado, mantiene la vinculación entre términos compuestos. La cantidad de observaciones que obtenemos nos está indicando la cantidad de palabras diferentes que contiene la variable(s) analizadas en la totalidad del corpus.
+
+Para calcular la frecuencia lo hacemos sobre las palabras con stopword:
 
 ```{r}
 tit_freq <- palab_tit_limp %>%
@@ -183,21 +412,20 @@ tit_res_freq <- palab_tit_res_limp %>%
 tit_res_freq
 ```
 
-También vamos a aplicar este tipo de análisis sobre la variable topics (Tópicos). Si bien provee menos cantidad de texto que las variables título y resúmen, como no la hemos tokenizado, mantiene aún el vínculo entre los términos compuestos. Esta variable es un dataframe tibble en sí misma, es decir que estamos frente a un anidamiento de dataframes. Cuando la exploramos, vemos que los términos aparecen calificados con un "tipo". Los tipos se adjudican por especificidad creciente: dominio, campo, subcampo y tópico. Aquí nos interesa analizar los más específicos, es decir, aquellos que están calificados con el 4to nivel (tópic). Para ello generamos el objeto tópicos. Vemos que necesitamos escribir un poco más de código por esa condición de no ser una columna normal de un dataframe, sino de ser una columna que contiene a su vez un dataframe adentro (dataframe anidado): 
+También vamos a aplicar este tipo de análisis sobre la variable topics(Tópicos). Si bien provee menos cantidad de texto que las variables título y resúmen, como no la hemos tokenizado, mantiene aún el vínculo entre los términos compuestos. Esta variable es un dataframe tibble en sí misma, es decir que estamos frente a un anidamiento de dataframes. Cuando la exploramos, vemos que los términos aparecen calificados con un "tipo". Los tipos se adjudican por especificidad creciente: dominio, campo, subcampo y tópico. Aquí nos interesa analisar los más específicos, es decir, aquellos que están calificados con el 4to nivel (tópic). Para ello generamos el objeto tópicos. Vemos que necesitamos escribir un poco más de código por esa condición de no ser una columna normal de un dataframe, sino de ser una columna que contiene a su vez un dataframe adentro (dataframe anidado):
 
-* **unnest** permite desplegar el dataframe dentro del dataframe general
-* **mutate** sirve para renombrar las columnas (transformando las originales)
-* **filter** sirve para filtrar por la categoría de tópico. En este caso usaremos "topic"
-* **select** para seleccionar las columnas que me interesan 
+**unnest** permite desplegar el dataframe dentro del dataframe general **mutate** sirve para renombrar las columnas **filter** sirve para filtrar por la categoría de tópico. En este caso usaremos "topic" **select** para seleccionar las columnas que me interesan
 
 ```{r}
 topicos <- socio_ar_selec %>%
-  unnest_longer (topics) %>%                                             
-  mutate(topics_id = topics$id, topics_type = topics$type, topics_name =    topics$display_name) %>%     
-  filter(topics_type == "topic") %>%                                           select(topics_id,topics_name)
+  unnest_longer (topics) %>%
+  mutate(topics_id = topics$id, topics_type = topics$type,
+         topics_name = topics$display_name) %>%
+  filter(topics_type == "topic") %>%
+  select(topics_id,topics_name)
 ```
 
-Calculamos las frecuencias
+Calculamos las frecuencias de los tópicos
 
 ```{r}
 top_freq <- topicos %>%
@@ -205,62 +433,38 @@ top_freq <- topicos %>%
 top_freq
 ```
 
+### Obtener resumen 
+
 En este punto, parece apropiado hacer un resumen que nos permita ver el tamaño de los distintos conjuntos de datos que vamos obteniendo:
 
-## Resumen
-
 ```{r}
-info <- c('Cant. de trabajos','Cant. palab títulos','Cant. palab títulos stopword','Cant. palab títulos únicas','Cant. palab títulos+resumen','Cant. palab títulos+resumen stopword','Cant. palab títulos+resumen únicas','Cant. tópicos','Cant. tópico únicos')
-
-cant <- c(c(nrow(socio_ar),nrow(palab_tit),nrow(palab_tit_limp),nrow(tit_freq),nrow(palab_tit_res),nrow(palab_tit_res_limp),nrow(tit_res_freq),nrow(topicos),nrow(top_freq)))
+info <- c('Cant. de trabajos','Cant. palab títulos',
+          'Cant. palab títulos stopword',
+          'Cant. palab títulos únicas',
+          'Cant. palab títulos+resumen',
+          'Cant. palab títulos+resumen stopword',
+          'Cant. palab títulos+resumen únicas',
+          'Cant. tópicos','Cant. tópico únicos',
+          'Cant. bigramas títulos con ID',
+          'Cant. bigramas títulos+resumen con ID')
+cant <- c(c(nrow(socio_ar),nrow(palab_tit),nrow(palab_tit_limp),
+            nrow(tit_freq),nrow(palab_tit_res),
+            nrow(palab_tit_res_limp),nrow(tit_res_freq),
+            nrow(topicos),nrow(top_freq),nrow(bigram_tit_id),
+            nrow(bigram_tit_res_id)))
 
 resumen <- tibble(col1 = info,col2 = cant)
 resumen
 ```
 
-# PROCESAMIENTO 2: Tokenización de términos compuestos
-
-Como hemos visto hasta aquí, trabajar con "bag of word" tiene el inconveniente de la desvinculación de las palabras que componen términos compuestos. Un tipo de procesamiento que se puede aplicar para tratar de encontrar una mejora en este sentido, es con la detección de bigramas, es decir con ventanas de dos palabras. También podrían ser tri-gramas, cuatri-gramas, y así. 
-
-## Trabajar con bigramas
-
-Obtenemos de los bigramas de los títulos ordenados por freq
-
-```{r}
-bigram_tit_id <- palab_tit_limp %>%
-  select (id,palabra) %>%
-  group_by(id) %>%
-  mutate(next_word = lead(palabra)) %>%
-  filter(!is.na(next_word)) %>%
-  mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
-  count(id,bigram, sort = TRUE)
-bigram_tit_id
-```
-
-Bigramas de los títulos + resumen ordenados por freq
-
-```{r}
-bigram_tit_res_id <- palab_tit_res_limp %>%
-  select (id,palabra) %>%
-  group_by(id) %>%
-  mutate(next_word = lead(palabra)) %>%
-  filter(!is.na(next_word)) %>%
-  mutate(bigram = paste(palabra, next_word, sep = " ")) %>%
-  count(bigram, sort = TRUE)
-bigram_tit_res_id
-```
-
-Agregamos estos resultados al resumen:
-
-```{r}
-resumen <- add_row(resumen,col1 = 'Cant. bigramas títulos con ID',col2 = nrow(bigram_tit_id))
-resumen <- add_row(resumen,col1 = 'Cant. bigramas títulos+resumen con ID',col2 = nrow(bigram_tit_res_id))
-resumen
-```
-
-# PROCESAMIENTO 3: Nubes de palabras
+### Nubes de palabras
 
 Antes de la generación de las nubes de palabras, aplicaremos, si lo creemos necesario, algún criterio de poda por frecuencia. En este caso, generaremos 3 nubes de palabras para poder comparar variantes. Generaremos la de los títulos por palabras individuales sin poda de frecuencias. La de los títulos por bigramas y la de tópicos las haremos con frecuencias mayores a 1.
+
+```{r}
+tit_freq_2 <- tit_freq %>%
+  filter(n > 1) 
+```
 
 ```{r}
 bigram_tit_f <- bigram_tit_id %>%
@@ -274,24 +478,143 @@ top_f <- top_freq %>%
   filter(n > 1) 
 ```
 
+Nube de palabras de los títulos
 ```{r}
-nube_tit <- wordcloud2(tit_freq, size = 0.7)  
-nube_tit
+nube_tit <- wordcloud2(tit_freq, size = 0.8)
 ```
 
-Con un código similar, se pueden crear, por ejemplo, la de bigramas de títulos y la de tópicos
+Esta parte de código que NO es importante, solo es necesaria para el renderizado y muestra de la nube en el PDF final.
 
 ```{r}
-nube_tit_2 <- wordcloud2(bigram_tit_f, size = 0.2) 
-nube_tit_2
+options(webshot.quiet = TRUE)
+invisible({
+html_temp <- tempfile(fileext = ".html")
+  img_output <- "nube_tit.png"
+  suppressMessages(saveWidget(nube_tit,html_temp,selfcontained = FALSE))
+  capture.output(
+    webshot2::webshot(html_temp, img_output, delay = 7, vwidth = 1000, vheight = 800,zoom = 2),
+    file = nullfile())
+  unlink(html_temp, force = TRUE)
+  })
+  
+knitr::include_graphics(img_output)
 ```
+
+Con un código similar, se pueden crear, por ejemplo, la de bigramas de títulos,
 
 ```{r}
-nube_top_2 <- wordcloud2(top_f, size = 0.6)
-nube_top_2
+nube_bigram <- wordcloud2(bigram_tit_f, size = 0.2)
 ```
 
+Código renderizado PDF
+```{r}
+invisible({
+html_temp <- tempfile(fileext = ".html")
+  img_output <- "nube_bigram.png"
+  suppressMessages(saveWidget(nube_bigram,html_temp,selfcontained = FALSE))
+  capture.output(
+    webshot2::webshot(html_temp, img_output, delay = 7, vwidth = 1000, vheight = 800,zoom = 2),
+    file = nullfile())
+  unlink(html_temp, force = TRUE)
+})
+  
+knitr::include_graphics(img_output)
+```
 
+o la de tópicos
+```{r}
+nube_top <- wordcloud2(top_f, size = 0.6) 
+```
+
+Código renderizado PDF
+```{r}
+invisible({
+html_temp <- tempfile(fileext = ".html")
+  img_output <- "nube_top.png"
+  suppressMessages(saveWidget(nube_top,html_temp,selfcontained = FALSE))
+  capture.output(
+    webshot2::webshot(html_temp, img_output, delay = 7, vwidth = 1000, vheight = 800,zoom = 2),
+    file = nullfile())
+  unlink(html_temp, force = TRUE)
+})
+
+knitr::include_graphics(img_output)
+```
+
+## TF-IDF y matrices término/documento
+
+Ya se mostró que las nubes de palabras simplemente están mostrando las frecuencias contabilizadas a nivel del corpus completo, visto como una BOW. 
+
+Ahora bien, siguiendo los antecedentes que propuso **Spark-Jones**, que a los fines de la recuperación de información, el mejor poder de discriminición se encuentra en las palabras que tienen una alta frecuencia intra-documental, pero también una baja frecuencia a nivel de la colección de documentos (corpus).
+
+TF-IDF = TF * IDF
+
+TF(t,d) = (Número de veces que aparece el término t en el documento d) / (Número total de términos en el documento d)
+
+IDF(t) = log 10 ((Número total de documentos) / (Número de documentos que contienen el término t))
+
+TF-IDF se ha utilizado ampliamente como una formula de ponderación de los términos en un corpus. 
+
+La forma para realizar esos cálculos de frecuencias es organizar el corpus de manera bidimensional, donde las filas pueden ser todos los documentos y las columnas los términos de la totalidad del corpus (o a la inversa). Cada elemento individual, es decir la intersección de un término en un documento dado, puede tomar un valor simple como un 0 si el término está ausente o un 1 si está presente. Esto se conoce como **frecuencia binaria** aunque en rigor no es una frecuencia. Si en lugar de eso ponemos los valores de **frecuencias absolutas**, resultarán siempre favorecidos los documentos más largos (a mayor vocabulario má sposibilidad de repetición de términos). Otra forma para reducir la variabilidad que tenga el corpus en cuanto a la longitud de los documentos es utilizar lo que se denomina **frecuencia logarítmica** log 10 (1+frecuencia absoluta). La **frecuencia relativa** al tamaño del documento suele ser muy utilizada.Un poco más sofisticado sería, entonces, poner el valor resultante del cálculo TF-IDF. 
+
+Un uso frecuente que se le da a estas matrices originarias de la RI (recuperación de información) es la TM (minería textual) con fines de determinar de que tratan los textos.
+
+En esta práctica, se generan las matrices TF-IDF para el corpus de títulos:
+
+```{r}
+corpus_tit <- corpus(socio_ar_selec_limp$title)
+tokens_tit <- tokens(corpus_tit,remove_punct = TRUE) %>%
+  tokens_remove(stopwords("es")) %>%
+  tokens_remove(stopwords("en")) %>%
+  tokens_remove(stopwords("fr")) %>%
+  tokens_remove(stopwords("it")) %>%
+  tokens_remove(stopwords("pt"))
+
+dfm_tit <- dfm(tokens_tit)
+dfm_tfidf_tit <- dfm_tfidf(dfm_tit)
+```
+
+Observamos que el resultado es una matriz gigante con más de 11 millones de elementos. Es rectangular de 1895 (documentos) x 5962 (términos o palabras). Las primeras 100 filas de la matriz muestran:
+
+```{r}
+top_terms <- textstat_frequency(dfm_tfidf_tit, n= 100, force =TRUE) %>%
+  as_tibble()
+
+top_terms
+```
+
+Esto se interpreta como: col1 = termino, col2 = suma global de los valores TF-IDF de ese termino en todos los documentos, col3 = rango = ranking (1 + frec), col4 = número de documentos donde aparece el término.
+
+Si queremos podríamos eliminar los 3 primeros términos d ela ecuación diciendo que elimine del cálculo a los términos que estén en más de 150 documentos.
+
+```{r}
+dfm_tit_2 <- dfm_trim (
+  dfm_tit,
+  max_docfreq = 150)
+
+dfm_tfidf_tit_2 <- dfm_tfidf(dfm_tit_2)
+```
+
+Técnicas posibles para visualizar estas matrices con algo de sentido: nuevamente las nubes de términos.
+
+```{r}
+quanteda.textplots::textplot_wordcloud(
+  dfm_tfidf_tit_2,
+  max_word = 60,
+  color = c("blue", "red", "green"),
+  rotation = 0.3,
+  min_size = 0.5, 
+  max_size = 4)
+```
+
+Se debe tener en cuenta que estas nubes no muestras nunca ni co-ocurrencia, ni correlación, ni distancias semánticas. Son solo frecuencias TF-IDF. Las palabras se disponen siguiendo un algoritmo de ubicación espacial óptima que gestiona los diferentes tamaños.
+
+## Redes de co-palabras
+
+
+# Bibliografía
+
+Porter, M. F. 1980. “An Algorithm for Suffix Stripping.” Program 14 (3): 130–137. https://doi.org/10.1108/eb046814.
 
 ***************************************************************************************************************************************************************************
 # PARTE II: Modelos de lenguaje *(introductorio)*
