@@ -20,11 +20,6 @@ format:
 # **PARTE I:** MINERIA DE TEXTOS *(introductorio)*
 **por Claudia M. González**
 
-# Introducción
-
-La minería de textos 
-...
-
 # Objetivo del módulo
 
 En esta primera parte del seminario se revisarán algunas de las técnicas más tradicionales de la minería textual, así como los tratamiento previos más habituales a los que se someten los corpus textuales antes de ser analizados.
@@ -33,60 +28,53 @@ Se parte por conformar un conjunto de datos que se utilizará como caso de anál
 
 Durante los ejercicios se trabajará con diversos paquetes, los cuales deberán estar instalados previamente haciendo uso de los cuadros de diálogo de R Studio (opción Tools). A continuación se brinda una muy breve descripción de cada uno.
 
-```{r, message=FALSE, warning=FALSE}
-library(tidyverse)
-```
-
 **Tidyverse** es una colección de paquetes de R para la importación, transformación, manipulación y visualización de datos ordenados. 
 
-```{r, message=FALSE, warning=FALSE}
-library(openalexR)
-```
+**ggplot2** es el paquete más importante de R para resolver visualizaciones de datos.
 
 **OpenalexR** es un paquete que permite recuperar información de la base de datos Open Alex y deja los datos preparados para ser manipulados en R base o por otros paquetes.
 
-```{r, message=FALSE, warning=FALSE}
-library(DataExplorer)
-```
-
 **DataExplorer** permite obtener salidas visuales útiles al realizar una primera exploración del conjunto de datos.
-
-```{r, message=FALSE, warning=FALSE}
-library(textclean)
-```
 
 **Textclean** permite detectar subcadenas cuya presencia no ayuda al momento del análisis. Puede borrarlas o normalizarlas.
 
-```{r, message=FALSE, warning=FALSE}
-library(tidytext)
-```
-
-**Tidytext** Entre sus principales funciones se encuentran las dedicadas a diferentes niveles de tokenización.
-
-```{r, message=FALSE, warning=FALSE}
-library(stopwords)
-```
+**Tidytext** entre sus principales funciones se encuentran las dedicadas a diferentes niveles de tokenización.
 
 **Stopword** permite aplicar la limpieza de palabras no significativas en diferentes idiomas.
 
-```{r, message=FALSE, warning=FALSE}
+**SnowballC** se utiliza para hacer stemming o llevar cada palabra a su raíz lingüistica 
+
+**wordcloud2**, **webshot2** y **htmlwidgets** el primero permite generar nubes de palabras. Los otros dos paquetes son necesarios para que las nubes se puedan imprimir en el PDF de salida de un quart document.
+
+**quanteda**, **quanteda.textstats** y **quanteda.textplots** es un paquete especializado en data_minning
+
+**Matrix** se utiliza para manipular matrices.
+
+**Widyr** si bien es parte del ecosistema tidy, necesita su propia instalación. Sirve para calcular frecuencias conjuntas. 
+
+**tidygraph**, **igraph** y **ggraph** se utilizan para graficar.
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(openalexR)
+library(DataExplorer)
+library(textclean)
+library(tidytext)
+library(stopwords)
 library(SnowballC)
-```
-
-**SnowballC** se utiliza para lematizar o llevar cada palabra a su raíz lingüistica 
-
-```{r, message=FALSE, warning=FALSE}
 library(wordcloud2)
 library(webshot2)
 library(htmlwidgets)
-```
-
-**wordcloud2** permite generar nubes de palabras. Los otros dos paquetes son necesarios para que las nubes se puedan imprimir en el PDF de salida.
-
-```{r}
 library(quanteda) 
 library(quanteda.textstats)
 library(quanteda.textplots)
+library(Matrix)
+library(widyr)
+library(tidygraph)
+library(igraph)
+library(ggraph)
+
 ```
 
 
@@ -112,7 +100,7 @@ En nuestro caso utilizaremos una forma de búsqueda muy sencilla, en la que indi
 
 El otro elemento que se incluye en la búsqueda, es la restricción de que los trabajos a recuperar deben tener al menos un autor que acompaña su firma con un lugar de trabajo en Argentina.
 
-```{r}
+```{r warning=FALSE}
 socio_ar <- oa_fetch(abstract.search = "sociología OR sociologia OR sociology OR sociologie OR soziologie",
                      authorships.institutions.country_code = "AR")
 ```
@@ -155,13 +143,17 @@ Si se toma los últimos dígitos del ID de los trabajos, se puede buscar por cua
 
 # Pre-procesamiento de los textos
 
-Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que es necesario hacer antes de tratar de obtener unos primeros resultados. Para ello se realizan algunas tareas que permiten quitarle "ruido" al texto. Estas tareas son la **limpieza**, la ***tokenization***, la aplicación de ***stopword*** y el ***stemming***.
+Una vez que contamos con el corpus textual a trabajar, comenzamos con algunos procesamientos que es necesario hacer antes de tratar de obtener unos primeros resultados. Para ello se realizan algunas tareas que permiten quitarle "ruido" al texto. Estas tareas consiste en la limpieza de símbolos,
+ la aplicación de ***stopword*** y la aplicación de algoritmos de  ***stemming***. También se transforma el texto aplicando ***tokenization*** y ***N-grams***, si se desea.
 
 ## Limpieza del texto
 
-Principalmente se realiza una limpieza de los residuos que puedan quedar de HTML y de tildes:
+Principalmente se realiza una limpieza de los residuos que puedan quedar de HTML y de tildes. Cualquier trabajo más fino requiere, por lo general conocer el uso de expresiones regulares.
+
+Las expresiones regulares 
 
 ```{r}
+socio_ar_selec_limp <- socio_ar_selec
 socio_ar_selec_limp$title <- socio_ar_selec$title %>%
   replace_html() %>%
   replace_contraction() %>%
@@ -176,6 +168,19 @@ socio_ar_selec_limp$abstract <- socio_ar_selec$abstract %>%
   replace_non_ascii () %>%
   replace_url () %>%
   replace_email ()
+```
+
+Si miramos los resultados, vemos que la puntuación general permanece, así como las mayúsculas (comprobar buscando GERMANI). Para eliminar:
+
+```{r}
+socio_ar_selec_limp <- socio_ar_selec_limp %>%
+  mutate(
+    title = str_remove_all (title,'[[:punct:]]'),
+    abstract = str_remove_all (abstract,'[[:punct:]]')
+  )
+
+socio_ar_selec_limp$title <- tolower(socio_ar_selec_limp$title)
+socio_ar_selec_limp$abstract <- tolower(socio_ar_selec_limp$abstract)
 ```
 
 ## Tokenization
@@ -220,77 +225,26 @@ Una vez que tenemos los listados, podemos proceder a la eliminación, la que sim
 Para aplicar stopword usamos el anti_join, que sirve para filtrar las filas de un dataframe en función de que no estén presentes en otro. Lo hacemos por idiomas: 
 
 ```{r}
-limp_tit_es <- palab_tit %>% 
-  filter(language == "es") %>%
-  anti_join(stopwords_es, by = "palabra") 
-
-limp_tit_es 
-
-limp_tit_res_es <- palab_tit_res %>% 
-  filter(language == "es") %>%
-  anti_join(stopwords_es, by = "palabra") 
-
-limp_tit_en <- palab_tit %>% 
-  filter(language == "en") %>%
-  anti_join(stopwords_en, by = "palabra") 
-
-limp_tit_res_en <- palab_tit_res %>% 
-  filter(language == "en") %>%
-  anti_join(stopwords_en, by = "palabra") 
-
-limp_tit_fr <- palab_tit %>% 
-  filter(language == "fr") %>%
-  anti_join(stopwords_fr, by = "palabra") 
-
-limp_tit_res_fr <- palab_tit_res %>% 
-  filter(language == "fr") %>%
-  anti_join(stopwords_fr, by = "palabra") 
-
-limp_tit_it <- palab_tit %>% 
-  filter(language == "it") %>%
-  anti_join(stopwords_it, by = "palabra") 
-
-limp_tit_res_it <- palab_tit_res %>% 
-  filter(language == "it") %>%
-  anti_join(stopwords_it, by = "palabra") 
-
-limp_tit_pt <- palab_tit %>% 
-  filter(language == "pt") %>%
-  anti_join(stopwords_pt, by = "palabra") 
-
-limp_tit_res_pt <- palab_tit_res %>% 
-  filter(language == "pt") %>%
-  anti_join(stopwords_pt, by = "palabra") 
-
-limp_tit_de <- palab_tit %>% 
-  filter(language == "de") %>%
+palab_tit_limp <- palab_tit %>%
+  anti_join(stopwords_es, by = "palabra") %>%
+  anti_join(stopwords_en, by = "palabra") %>%
+  anti_join(stopwords_fr, by = "palabra") %>%
+  anti_join(stopwords_it, by = "palabra") %>%
+  anti_join(stopwords_pt, by = "palabra") %>%
   anti_join(stopwords_de, by = "palabra") 
-
-limp_tit_res_de <- palab_tit_res %>% 
-  filter(language == "de") %>%
+  
+palab_tit_res_limp <- palab_tit_res %>%
+  anti_join(stopwords_es, by = "palabra") %>%
+  anti_join(stopwords_en, by = "palabra") %>%
+  anti_join(stopwords_fr, by = "palabra") %>%
+  anti_join(stopwords_it, by = "palabra") %>%
+  anti_join(stopwords_pt, by = "palabra") %>%
   anti_join(stopwords_de, by = "palabra") 
 ```
 
 * [caso a revisar 502678 título en español, abstract en inglés, language en o 610174 título y resumen en inglés, language es]
 
-Juntamos los conjuntos de todos los idiomas en uno general. Lo hacemos tanto para título como para título + resumen:
-
-```{r}
-palab_tit_limp <- bind_rows(limp_tit_es,                        limp_tit_en,limp_tit_fr,limp_tit_it,limp_tit_pt)
-
-palab_tit_res_limp <- bind_rows(limp_tit_res_es,
-limp_tit_res_en,limp_tit_res_fr,limp_tit_res_it,limp_tit_res_pt)
-
-palab_tit_limp <- palab_tit %>%
-  anti_join(stopwords_es, by = "palabra") %>%
-  anti_join(stopwords_en, by = "palabra") 
-  
-palab_tit_res_limp <- palab_tit_res %>%
-  anti_join(stopwords_es, by = "palabra") %>%
-  anti_join(stopwords_en, by = "palabra")  
-```
-
-## n-gramas (tokenización de términos compuestos)
+## N-grams (ventanas de tokenización)
 
 Como hemos visto hasta aquí, trabajar con **bag of words** tiene el inconveniente de la desvinculación de las palabras que componen términos copuestos. Un tipo de procesamiento que se puede aplicar para tratar de encontrar una mejora en este sentido, es con la detección de bigramas, es decir con ventanas de dos palabras. También podrían ser tri-gramas, cuatri-gramas, y así.
 
@@ -321,7 +275,7 @@ bigram_tit_res_id <- palab_tit_res_limp %>%
 
 ## Stemming
 
-El *stemming* es el proceso de reducción de las variantes de las palabras hasta llegar a obtener el lema (entrada de diccionario). Los algoritmos que existen basan su procedimiento en la eliminación de prefijos o sufijo haciendo chequeos contra listas de comprobación y aplican algunas reglas propias por idioma. Se debe tener en cuenta que esto muchas veces hace que lo que se obtiene finalmente no sean palabras reales. Si bien el fin último es la lematización -llegar a entradas de diccionario-, no siempre es posible, y como es de esperar, los algoritmos trabajan mejor en el idioma inglés. El algoritmo más usado es el de Porter (1980), pero también son conocidos los llamados **S**, **Lovins** y **snowball**.
+El *stemming* es el proceso de reducción de las variantes de las palabras hasta llegar a obtener el lema (entrada de diccionario). Los algoritmos que existen basan su procedimiento en la eliminación de prefijos o sufijo haciendo chequeos contra listas de comprobación y aplican algunas reglas propias por idioma. Se debe tener en cuenta que esto muchas veces hace que lo que se obtiene finalmente no sean palabras reales. Si bien el fin último es la lematización -llegar a entradas de diccionario-, no siempre es posible, y como es de esperar, los algoritmos trabajan mejor en el idioma inglés. El algoritmo más usado es el de Porter (1980), pero también son conocidos los llamados **S**, **Lovins**, **Lancaster** y **snowball**.
 
 Aplicamos el stemming **snowball** de manera separada por idiomas:
 
@@ -541,7 +495,7 @@ html_temp <- tempfile(fileext = ".html")
 knitr::include_graphics(img_output)
 ```
 
-## TF-IDF y matrices término/documento
+## TF-IDF y matrices documento/término (DTM)
 
 Ya se mostró que las nubes de palabras simplemente están mostrando las frecuencias contabilizadas a nivel del corpus completo, visto como una BOW. 
 
@@ -561,8 +515,15 @@ Un uso frecuente que se le da a estas matrices originarias de la RI (recuperaci�
 
 En esta práctica, se generan las matrices TF-IDF para el corpus de títulos:
 
+```{r warning: FALSE}
+#Uso paquete quanteda
+
+corpus_tit <- corpus(socio_ar_selec$title)
+
+head(corpus_tit)
+```
+
 ```{r}
-corpus_tit <- corpus(socio_ar_selec_limp$title)
 tokens_tit <- tokens(corpus_tit,remove_punct = TRUE) %>%
   tokens_remove(stopwords("es")) %>%
   tokens_remove(stopwords("en")) %>%
@@ -570,9 +531,21 @@ tokens_tit <- tokens(corpus_tit,remove_punct = TRUE) %>%
   tokens_remove(stopwords("it")) %>%
   tokens_remove(stopwords("pt"))
 
-dfm_tit <- dfm(tokens_tit)
-dfm_tfidf_tit <- dfm_tfidf(dfm_tit)
+head(tokens_tit)
 ```
+
+```{r}
+dfm_tit <- dfm(tokens_tit)
+
+head(dfm_tit)
+```
+
+```{r}
+dfm_tfidf_tit <- dfm_tfidf(dfm_tit)
+
+head(dfm_tfidf_tit)
+```
+
 
 Observamos que el resultado es una matriz gigante con más de 11 millones de elementos. Es rectangular de 1895 (documentos) x 5962 (términos o palabras). Las primeras 100 filas de la matriz muestran:
 
@@ -583,11 +556,15 @@ top_terms <- textstat_frequency(dfm_tfidf_tit, n= 100, force =TRUE) %>%
 top_terms
 ```
 
-Esto se interpreta como: col1 = termino, col2 = suma global de los valores TF-IDF de ese termino en todos los documentos, col3 = rango = ranking (1 + frec), col4 = número de documentos donde aparece el término.
+Esto se interpreta como:
+col1 = termino,
+col2 = suma global de los valores TF-IDF de ese término en todos los documentos,
+col3 = rango = ranking (1 el + frec),
+col4 = número de documentos donde aparece el término.
 
-Si queremos podríamos eliminar los 3 primeros términos d ela ecuación diciendo que elimine del cálculo a los términos que estén en más de 150 documentos.
+Si queremos podríamos eliminar los 3 primeros términos de la ecuación diciendo que elimine del cálculo a los términos que estén en más de 150 documentos.
 
-```{r}
+```{r, warning=FALSE}
 dfm_tit_2 <- dfm_trim (
   dfm_tit,
   max_docfreq = 150)
@@ -595,9 +572,9 @@ dfm_tit_2 <- dfm_trim (
 dfm_tfidf_tit_2 <- dfm_tfidf(dfm_tit_2)
 ```
 
-Técnicas posibles para visualizar estas matrices con algo de sentido: nuevamente las nubes de términos.
+Técnicas posibles para visualizar estas matrices con algo de sentido: nuevamente apelamos a las nubes de términos.
 
-```{r}
+```{r, warning=FALSE}
 quanteda.textplots::textplot_wordcloud(
   dfm_tfidf_tit_2,
   max_word = 60,
@@ -609,8 +586,368 @@ quanteda.textplots::textplot_wordcloud(
 
 Se debe tener en cuenta que estas nubes no muestras nunca ni co-ocurrencia, ni correlación, ni distancias semánticas. Son solo frecuencias TF-IDF. Las palabras se disponen siguiendo un algoritmo de ubicación espacial óptima que gestiona los diferentes tamaños.
 
+## Medidas de asociación y la detección de colocaciones
+
+El objetivo es identificar las combinaciones de palabras más significativas. Para eso se detectan los bigramas o trigramas que aparecen juntos más frecuentemente de lo esperado por azar. 
+
+Para determinar esto, se utiliza alguna métrica estadística del tipo Lambda (o log-lambda), PMI (Pointwise Mutual Information) o Chi2 (CHI cuadrado), entre otras. En este caso utilizaremos el paquete **Quantera** que tiene implementada una función denominada **textstats_collocations**. Esta función utilizando el estadístico Lambda. 
+
+Se considera que Lambda da un buen balance, en definitiva, entre el *recall*, esa capacidad del sistema de recuperar todo lo relevante, y la precisión, es decir, de ser muy certero con lo que recupera. Hay que tener en cuenta que estas medidas pueden comportarse de distinta manera según el tamaño de los corpus. Para corpus muy grandes se recomienda CHI2. Quanteda considera que Lambda es apropiada para corpus chicos-medianos or su robustez y tratamiento hacia los datos raros. Evalúa cuán inesperadamente frecuente es la co-ocurrencia de dos o más palabras, comparando:
+
+**- Frecuencia observada** (cuántas veces aparecen juntas en el corpus).
+**- Frecuencia esperada** (cuántas veces se esperaría que aparecieran juntas si su distribución fuera aleatoria).
+
+Valores cercanos a 3.84, que corresponde a un p < 0.05 ya se considera una colocación significativa, que las palabras tienden a aparecer juntas más de lo esperado por azar. Valores más altos (por ejemolo 12.3), serán muy significativas. Valores ~0, muy poco significativas.
+
+En nuestro ejemplo lo aplicaremos sobre los títulos + resúmenes. Primero, entonces, generamos el corpus: 
+
+```{r}
+corpus_tit_res <- corpus(paste(socio_ar_selec_limp$title, socio_ar_selec_limp$abstract, sep = " ")) 
+
+head(corpus_tit_res)
+```
+
+Luego se tokeniza:
+
+```{r}
+corpus_tit_res_tok <- tokens(corpus_tit_res) 
+
+head(corpus_tit_res_tok)
+```
+
+Se aplica stopword:
+```{r}
+corpus_tit_res_tok <- tokens(corpus_tit_res) %>%
+  tokens_remove(stopwords("es")) %>%
+  tokens_remove(stopwords("en")) %>%
+  tokens_remove(stopwords("fr")) %>%
+  tokens_remove(stopwords("it")) %>%
+  tokens_remove(stopwords("pt")) 
+ 
+head(corpus_tit_res_tok)
+```
+
+```{r}
+collocations_tit_res <- textstat_collocations(
+  corpus_tit_res_tok,
+  size = 2,          # Bigramas
+  min_count = 2,     # Mínimo 2 apariciones
+  method = "lambda"  # Métrica estadística
+)
+
+collocations_tit_res <- collocations_tit_res[order(-collocations_tit_res$lambda), ]
+
+head(collocations_tit_res)
+```
+
+En la salida observamos que nos da también el z-score como medida complementaria. El z-score (o puntuación z) es una medida que indica cuántas desviaciones estándar se aleja la frecuencia observada de la frecuencia esperada bajo independencia.
+
+Un z > 3 indica que la colocación es estadísticamente significativa (p < 0.001). z ≈ 0, no hay asociación significativa y z < 0, las palabras co-ocurren menos de lo esperado (repulsión).
+
 ## Redes de co-palabras
 
+Si bien el análisis anterior nos brinda información bastante sustancial, si queremos verla en una síntesis gráfica, tendremos que apelar a las llamadas redes de co-ocurrencia de palabras. 
+
+Estas redes tienen como andamiaje conceptual el Análisis de Redes Sociales (ARS), técnica que explicita, fundamentalmente, la intensidad de las relaciones utilizando la teoria de grafos.
+
+Los elementos principales son: 
+1- Nodos (vértices): Representan los actores de la red. En nuestro caso serán las palabras o **collocations**.
+2- Enlaces (aristas): Son las conexiones entre nodos. En nuestro caso serán las ocurrencias conjuntas.
+3- Redes: Son los grafos resultantes que modelan relaciones de co-ocurrencia, que en nuestro caso serán no dirigidas, y podrían ser ponderadas/no ponderadas.
+
+De las redes se pueden obtener algunas métricas. La smás comunes son:
+
+Centralidad: Identifica nodos influyentes (grado, intermediación, cercanía).
+Densidad: Mide el nivel de conexión en la red.
+Comunidades: Grupos de nodos densamente conectados (ej: algoritmos como Louvain).
+
+Para comenzar utilizaremos del paquete Quanteda la función **tokens-compound** que sirve para detectar tokens compuestos. Nosotros pediremos que esa detección la haga basándose en las **collocations** que obtuvimos en el paso anterior:
+
+
+```{r}
+corpus_tok_coll <- tokens_compound(corpus_tit_res_tok, collocations_tit_res)
+
+head(corpus_tok_coll)
+```
+
+Una vez que tenemos el corpus tokenizado de acuerdo al patrón de las **collocations**, le vamos a aplicar stemming
+
+```{r}
+corpus_tok_coll_stem <- tokens_wordstem(corpus_tok_coll, 
+             language = "spanish") 
+
+corpus_tok_coll_stem <- tokens_wordstem(corpus_tok_coll_stem, 
+             language = "english") 
+
+corpus_tok_coll_stem <- tokens_wordstem(corpus_tok_coll_stem, 
+             language = "french") 
+
+head (corpus_tok_coll_stem)
+```
+
+lo convertimos en una matriz término/documento. Proponemos un umbral de 5 frecuencias como umbral mínimo de corte: 
+
+```{r}
+minimumFrequency <- 10
+```
+
+La matriz que generamos será de presencias/ausencias, es decir, no ponderada:
+
+```{r}
+dfm_dtm_bin <- corpus_tok_coll_stem %>% 
+  tokens_remove("") %>%
+  dfm() %>% 
+  dfm_trim(min_docfreq = minimumFrequency, max_docfreq = 1000) %>%   dfm_weight("boolean")
+
+head(dfm_dtm_bin)
+```
+
+Estamos frente a una matriz rectangular de la que terminaremos derivando la matriz simétrica de co-ocurrencias. Esto se logra haciendo una multiplicación de matrices. La matriz original nDocs x nTerms se multiplica por su transpuesta nTerms x nDocs. Esto genera la matriz término/término de co-ocurrencias. Los valores pasan a ser la frecuencias de ocurrencias conjuntas, y en la diagonal queda registrado el valor de la frecuencia del término. Nos queda una mátriz simétrica ponderada por frecuencia.
+
+```{r}
+dfm_ttm <- t(dfm_dtm_bin) %*% dfm_dtm_bin
+
+head(dfm_ttm)
+```
+
+Tratar de graficar estas matrices tan grandes, se hace muy bien con aplicaciones externas a R, como VOSViewer, por ejemplo. Los paquetes de R no resuelven muy bien esto. Lo que sí puede ser útil realizar, son vistas parciales, por ejemplo, tomar un término particular y analizar su contexto.  
+
+Para nuestro ejemplo utilizaremos el término *pobreza* y usaremos una propuesta de análisis de los autores modelización desarrollada por el modelo de medición propuesto por Niekler y Wiedermann que adaptamos a nuestro caso.
+
+La propuesta consiste en graficar la red que muestra el término elegido puesto en relación con otros.
+
+Como primer paso mostramos que resultados arroja la medición de 3 medidas de significancia del término elegido contra los 20 primeros términos en el ranking de cada una de las medidas: MT (*mutual information*), coeficiente de Dice y Log-Likelihood (Log de verosimilitud)
+
+```{r}
+coocTerm <- "urban"
+k <- nrow(dfm_dtm_bin)
+ki <- sum(dfm_dtm_bin[, coocTerm])
+kj <- colSums(dfm_dtm_bin)
+names(kj) <- colnames(dfm_dtm_bin)
+kij <- dfm_ttm[coocTerm, ]
+```
+
+MT - Mutual Information significancia
+```{r}
+mutualInformation_Sig <- log(k * kij / (ki * kj))
+mutualInformation_Sig <- mutualInformation_Sig[order(mutualInformation_Sig, decreasing = TRUE)]
+```
+
+Dice
+```{r}
+dice_sig <- 2 * kij / (ki + kj)
+dice_sig <- dice_sig[order(dice_sig, decreasing=TRUE)]
+```
+
+Log Likelihood
+```{r}
+log_like_sig <- 2 * ((k * log(k)) - (ki * log(ki)) - (kj * log(kj)) + (kij * log(kij)) 
+               + (k - ki - kj + kij) * log(k - ki - kj + kij) 
+               + (ki - kij) * log(ki - kij) + (kj - kij) * log(kj - kij) 
+               - (k - ki) * log(k - ki) - (k - kj) * log(k - kj))
+log_like_sig <- log_like_sig[order(log_like_sig, decreasing=T)]
+```
+
+Se juntan los resultados en un solo dataframe para evaluar, en definitiva que medida aplicar:
+
+```{r}
+# Poner todos los valores de significancia en un dataframe para verlos
+resultOverView <- data.frame(
+  names(sort(kij, decreasing=T)[1:20]), sort(kij, decreasing=T)[1:20],
+  names(mutualInformation_Sig[1:20]), mutualInformation_Sig[1:20], 
+  names(dice_sig[1:20]), dice_sig[1:20], 
+  names(log_like_sig[1:20]), log_like_sig[1:20],
+  row.names = NULL)
+colnames(resultOverView) <- c("Terms", "Freq", "MI-terms", "MI", "Dice-Terms", "Dice", "LogL-Terms", "LogL")
+print(resultOverView)
+```
+
+******** FUNCIÓN
+
+```{r}
+calculateCoocStatistics <- function(coocTerm, binDTM, measure = "DICE") {
+  
+  # Ensure Matrix (SparseM} or matrix {base} format
+  require(Matrix)
+ 
+  # Ensure binary DTM
+  if (any(binDTM > 1)) {
+    binDTM[binDTM > 1] <- 1
+  }
+  
+  # calculate cooccurrence counts
+  coocCounts <- t(binDTM) %*% binDTM
+  
+  # retrieve numbers for statistic calculation
+  k <- nrow(binDTM)
+  ki <- sum(binDTM[, coocTerm])
+  kj <- colSums(binDTM)
+  names(kj) <- colnames(binDTM)
+  kij <- coocCounts[coocTerm, ]
+  
+  # calculate statistics
+  switch(measure, 
+         DICE = {
+           dicesig <- 2 * kij / (ki + kj)
+           dicesig <- dicesig[order(dicesig, decreasing=TRUE)]
+           sig <- dicesig
+         },
+         LOGLIK = {
+           logsig <- 2 * ((k * log(k)) - (ki * log(ki)) - (kj * log(kj)) + (kij * log(kij)) 
+                          + (k - ki - kj + kij) * log(k - ki - kj + kij) 
+                          + (ki - kij) * log(ki - kij) + (kj - kij) * log(kj - kij) 
+                          - (k - ki) * log(k - ki) - (k - kj) * log(k - kj))
+           logsig <- logsig[order(logsig, decreasing=T)]
+           sig <- logsig    
+         },
+         MI = {
+           mutualInformationSig <- log(k * kij / (ki * kj))
+           mutualInformationSig <- mutualInformationSig[order(mutualInformationSig, decreasing = TRUE)]
+           sig <- mutualInformationSig    
+         },
+         {
+           sig <- sort(kij, decreasing = TRUE)
+         }
+        )
+  sig <- sig[-match(coocTerm, names(sig))]
+  return(sig)
+}
+```
+
+*************FIN FUNCIÓN
+
+Aplicamos la función para calcular el estadístico 
+```{r}
+# Definición de un parámetro para la representación de las co-ocurrencias de un concepto
+numberOfCoocs <- 20
+# Determinación del término contra el cuál serán medidos los restantes.
+coocTerm <- "urban"
+```
+
+```{r}
+coocs <- calculateCoocStatistics(coocTerm, dfm_dtm_bin, measure="DICE")
+
+print(coocs[1:numberOfCoocs])
+```
+
+Generamos un grafo con **Igraph**. 
+
+En la última matriz de coocurrencia calculada tenemos, en definitiva,  tripletas que tienen 3 datos: el término objetivo, el término con el que co-ocurre y el valor de significancia de la asociación. Para graficarla, esos valores se denotan como: from (nodo origen), to (nodo destino) y sig (ponderación por significancia). 
+
+El proceso de armado del dataframe que da origen al grafo se ejecuta en dos pasos:
+1- se obtienen todos los términos que co-ocurren de manera significativa con el término elegido.
+2- se obtienen todas las co-ocurrencias de los términos del paso 1.
+
+Los resultados intermedios de cada término se almacenan como tripletas temporales llamadas tmpGraph. Con el comando rbind todos los tmpGraph se añaden al objeto de red completo almacenado en resultGraph.
+
+Se parte por definir la estructura del dataframe final, aún vacío
+
+```{r}
+resultGraph <- data.frame(from = character(), to = character(), sig = numeric(0))
+```
+
+Se genera el dataframe temporario que se ira llenando
+
+```{r}
+tmpGraph <- data.frame(from = character(), to = character(), sig = numeric(0))
+
+#el data frame para para el grafo temporario se llena con el código que sigue: 
+
+#calcular el número correcto de filas a llenar. Más arriba habiamos definido el valor de numberOfCoocs en 15
+tmpGraph[1:numberOfCoocs, 3] <- coocs[1:numberOfCoocs]
+#col 1: el término elegido
+tmpGraph[, 1] <- coocTerm
+#col 2: el término de co-occurrencia
+tmpGraph[, 2] <- names(coocs)[1:numberOfCoocs]
+#col3: valores de significancia
+tmpGraph[, 3] <- coocs[1:numberOfCoocs]
+
+head(tmpGraph)
+```
+
+Se suma esa dataframe temporal al dataframe definitiva
+```{r}
+resultGraph <- rbind(resultGraph, tmpGraph)
+```
+
+```{r}
+# Iteración sobre las co-ocurrencias más significativas (numberOfCoocs) del término que se busca
+for (i in 1:numberOfCoocs){
+  
+  # Se llama a la función que calcula las co-occurrence para el término i y el resto de palabras con las que co-occurrences
+  newCoocTerm <- names(coocs)[i]
+  coocs2 <- calculateCoocStatistics(newCoocTerm, dfm_dtm_bin, measure="DICE")
+  
+  #muestra las co-occurrencias
+  coocs2[1:10]
+  
+  # Se estructura el objeto grafo temporal
+  tmpGraph <- data.frame(from = character(), to = character(), sig = numeric(0))
+  tmpGraph[1:numberOfCoocs, 3] <- coocs2[1:numberOfCoocs]
+  tmpGraph[, 1] <- newCoocTerm
+  tmpGraph[, 2] <- names(coocs2)[1:numberOfCoocs]
+  tmpGraph[, 3] <- coocs2[1:numberOfCoocs]
+  
+  #Se suman los resultados del grafo temporario al grafo resultante
+  resultGraph <- rbind(resultGraph, tmpGraph[2:length(tmpGraph[, 1]), ])
+}
+
+# Muestra algunos ejemplos del grafo resultante
+resultGraph[sample(nrow(resultGraph), 6), ]
+```
+
+```{r}
+coocs <- calculateCoocStatistics(coocTerm, dfm_dtm_bin, measure="DICE")
+# Visualización de los principales términos numberOfCoocs
+print(coocs[1:numberOfCoocs])
+```
+
+```{r}
+require(igraph)
+
+# seteo de semilla
+set.seed(123)
+
+# Crear un objeto como grafo no dirigido
+graphNetwork <- graph.data.frame(resultGraph, directed = F)
+
+# Identificación de todos los nodos con menos de 4 aristas
+verticesToRemove <- V(graphNetwork)[degree(graphNetwork) < 4]
+# Estas aristas son removidas del grafo
+graphNetwork <- delete.vertices(graphNetwork, verticesToRemove) 
+
+# Asignación del color a los nodos (término buscado azul, otros naranja)
+V(graphNetwork)$color <- ifelse(V(graphNetwork)$name == coocTerm, 'cornflowerblue', 'orange') 
+
+# Seteo de del color de las aristas
+E(graphNetwork)$color <- adjustcolor("DarkGray", alpha.f = .5)
+# sescala de significancia entre 1 y 10 para el ancho de la arista
+E(graphNetwork)$width <- scales::rescale(E(graphNetwork)$sig, to = c(1, 10))
+# Seteo de aristas con grosor
+E(graphNetwork)$curved <- 0.15 
+# Tamaño de nodos por su grado en la red (escala entre 5 y 15)
+V(graphNetwork)$size <- scales::rescale(log(degree(graphNetwork)), to = c(5, 15))
+
+# Define el marco y el espaciado en el grafo
+par(mai=c(0,0,1,0)) 
+
+# Gráfico
+plot(
+  graphNetwork,             
+  layout = layout.fruchterman.reingold, # Algoritmo de graficación 
+  main = paste(coocTerm, ' Graph'),
+  vertex.label.family = "sans",
+  vertex.label.cex = 0.8,
+  vertex.shape = "circle",
+  vertex.label.dist = 0.5,          # Las distancias etiq respectos a nodos 
+  vertex.frame.color = adjustcolor("darkgray", alpha.f = .5),
+  vertex.label.color = 'black',     # Color del nombre de nodos
+  vertex.label.font = 1,            # Fuente del nombre de nodos
+  vertex.label = V(graphNetwork)$name,      # nombre de los nodos
+  vertex.label.cex = 1 # tamaño de fuente del nombre de los nodos
+)
+
+```
 
 # Bibliografía
 
